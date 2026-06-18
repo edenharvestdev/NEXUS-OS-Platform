@@ -29,8 +29,9 @@ export default function OnboardingPage() {
   const apply = async () => {
     try {
       await api.selectIndustry(selected)
-      await api.applyIndustryTemplate(selected)
-      showToast('นำ Workbook Template เข้าระบบ — Dictionary 10 ตัว + แผนก + SOP')
+      const res = await api.applyIndustryTemplate(selected)
+      const dictCount = selected === 'tamada' ? 59 : 10
+      showToast(`นำ Template เข้าระบบ — Dictionary ${res.dictionary || dictCount} ตัว + แผนก + SOP`)
       load()
     } catch (e: any) { showToast(e.message, 'error') }
   }
@@ -66,7 +67,11 @@ export default function OnboardingPage() {
 
       <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 14, padding: 24 }}>
         <div style={{ fontWeight: 700, color: C.text, marginBottom: 8 }}>Phase 0: เลือกอุตสาหกรรม + นำ Template (Tab 1)</div>
-        <div style={{ fontSize: 12, color: C.text3, marginBottom: 16 }}>คลินิก = Data Dictionary 10 ตัวตาม Workbook</div>
+        <div style={{ fontSize: 12, color: C.text3, marginBottom: 16 }}>
+          {selected === 'tamada'
+            ? 'Tamada + SDX = Data Dictionary 59 ตัวตาม PDF v2.0 + 6 สาขา + 8 SOP'
+            : 'คลินิก = Data Dictionary 10 ตัวตาม Workbook'}
+        </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 10, marginBottom: 20 }}>
           {(state.templates || []).map((t: any) => (
             <button key={t.id} onClick={() => setSelected(t.id)}
@@ -87,8 +92,8 @@ export default function OnboardingPage() {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12 }}>
         {[
-          { l: 'Dictionary', v: state.progress?.dictionary, target: 10 },
-          { l: 'Departments', v: state.progress?.departments, target: 7 },
+          { l: 'Dictionary', v: state.progress?.dictionary, target: state.progress?.dictionary_target || 10 },
+          { l: 'Departments', v: state.progress?.departments, target: state.progress?.departments_target || 7 },
           { l: 'People', v: state.progress?.users, target: 2 },
           { l: 'SOP/Knowledge', v: state.progress?.knowledge, target: 3 },
           { l: 'Work Logs', v: state.progress?.work_logs, target: 1 },

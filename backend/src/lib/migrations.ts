@@ -24,6 +24,42 @@ export const MIGRATIONS: Migration[] = [
     name: 'users_line_user_id',
     up: `ALTER TABLE users ADD COLUMN line_user_id TEXT`,
   },
+  {
+    version: 5,
+    name: 'dictionary_domain',
+    up: `ALTER TABLE data_dictionary ADD COLUMN domain TEXT`,
+  },
+  {
+    version: 6,
+    name: 'dictionary_priority',
+    up: `ALTER TABLE data_dictionary ADD COLUMN priority TEXT DEFAULT 'basic'`,
+  },
+  {
+    version: 7,
+    name: 'dictionary_entity',
+    up: `ALTER TABLE data_dictionary ADD COLUMN entity TEXT DEFAULT 'all'`,
+  },
+  {
+    version: 8,
+    name: 'branches_table',
+    up: `CREATE TABLE IF NOT EXISTS branches (
+      id TEXT PRIMARY KEY,
+      company_id TEXT NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+      code TEXT NOT NULL,
+      name TEXT NOT NULL,
+      entity TEXT DEFAULT 'tamada',
+      branch_type TEXT DEFAULT 'owned',
+      franchisee TEXT,
+      region TEXT,
+      created_at TEXT,
+      UNIQUE(company_id, code)
+    )`,
+  },
+  {
+    version: 9,
+    name: 'kpi_branch_code',
+    up: `ALTER TABLE kpi_entries ADD COLUMN branch_code TEXT`,
+  },
 ]
 
 export async function runMigrations(): Promise<{ applied: number; current: number }> {

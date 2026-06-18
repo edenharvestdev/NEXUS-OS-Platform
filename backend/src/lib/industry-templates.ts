@@ -1,7 +1,9 @@
 import { CLINIC_DICTIONARY_SEED } from './nexus-schema'
 import { DEFAULT_DEPARTMENTS } from './nexus-extended-schema'
+import { TAMADA_DICTIONARY_SEED } from './tamada-data-taxonomy'
+import { TAMADA_DEPARTMENTS, TAMADA_SOPS } from './tamada-entities'
 
-export type IndustryId = 'clinic' | 'restaurant' | 'factory' | 'insurance' | 'realestate' | 'generic'
+export type IndustryId = 'tamada' | 'clinic' | 'restaurant' | 'factory' | 'insurance' | 'realestate' | 'generic'
 
 export interface IndustryTemplate {
   id: IndustryId
@@ -20,6 +22,17 @@ const clinicSops = [
 ]
 
 export const INDUSTRY_TEMPLATES: Record<IndustryId, IndustryTemplate> = {
+  tamada: {
+    id: 'tamada', name: 'Tamada Clinic & SDX Dental', name_th: 'Tamada + SDX (Data-Driven Org v2.0)',
+    departments: TAMADA_DEPARTMENTS,
+    dictionary: TAMADA_DICTIONARY_SEED,
+    sops: TAMADA_SOPS.map(s => ({ title: s.title, layer: s.layer, content: s.content, tier: s.tier })),
+    roles: [
+      { role: 'admin', dept: 'Management', skills: [{ key: 'leadership', name: 'Leadership' }, { key: 'strategy', name: 'Strategy' }] },
+      { role: 'finance', dept: 'Finance', skills: [{ key: 'financial_analysis', name: 'Financial Analysis' }] },
+      { role: 'staff', dept: 'Medical', skills: [{ key: 'patient_care', name: 'Patient Care' }, { key: 'treatment', name: 'Treatment' }] },
+    ],
+  },
   clinic: {
     id: 'clinic', name: 'Clinic', name_th: 'คลินิก',
     departments: ['Management', 'Finance', 'HR', 'Operation', 'Marketing', 'IT'],

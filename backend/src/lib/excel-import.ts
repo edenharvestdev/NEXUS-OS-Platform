@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs'
-import { queryAll, run, newId } from './db'
+import { queryAll, queryOne, run, newId } from './db'
 import { markSourcesImported } from './onboarding'
+import { seedTamadaDictionary, seedTamadaBranches } from './tamada-seed'
 
 type Row = Record<string, string>
 
@@ -43,6 +44,22 @@ export async function importCSV(
   const tempPasswords: string[] = []
   let imported = 0
 
+  if (target === 'tamada_taxonomy') {
+    const dictionary = await seedTamadaDictionary(companyId, userId)
+    const branches = await seedTamadaBranches(companyId, userId)
+    imported = dictionary + branches
+    await markSourcesImported(companyId)
+    await run(
+      `INSERT INTO ingestion_jobs (id, company_id, user_id, source, filename, rows_imported, status, meta)
+       VALUES ($1,$2,$3,$4,$5,$6,'completed',$7)`,
+      [
+        newId(), companyId, userId, 'tamada_taxonomy', 'tamada_taxonomy.csv', imported,
+        JSON.stringify({ target, dictionary, branches }),
+      ],
+    )
+    return { rows_imported: imported, errors }
+  }
+
   for (const raw of rows) {
     const row = target === 'pos' ? normalizePosRow(raw) : raw
     try {
@@ -84,6 +101,39 @@ export async function importCSV(
             row.name || row.metric_key,
             row.definition || row.name,
             row.formula || null, row.source || 'Import', row.owner || 'Admin', row.security_tier || 'T1',
+          ],
+        )
+        imported++
+      } else if (target === 'kpi') {
+        await run(
+          `INSERT INTO kpi_entries (id, company_id, user_id, metric_key, metric_name, value, period, note, branch_code)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+          [
+            newId(), companyId, userId,
+            row.metric_key || row.key,
+            row.metric_name || row.name || row.metric_key,
+            parseFloat(String(row.value || '0').replace(/,/g, '')),
+            row.period || row.date || new Date().toISOString().slice(0, 10),
+            row.note || null,
+            row.branch_code || null,
+          ],
+        )
+        imported++
+      } else if (target === 'branches') {
+        const code = row.code || row.branch_code
+        if (!code) { errors.push('branch code required'); continue }
+        const dup = await queryOne('SELECT id FROM branches WHERE company_id = $1 AND code = $2', [companyId, code])
+        if (dup) continue
+        await run(
+          `INSERT INTO branches (id, company_id, code, name, entity, branch_type, franchisee, region)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+          [
+            newId(), companyId, code,
+            row.name || code,
+            row.entity || 'tamada',
+            row.branch_type || row.type || 'owned',
+            row.franchisee || null,
+            row.region || null,
           ],
         )
         imported++

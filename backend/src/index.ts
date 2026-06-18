@@ -35,6 +35,7 @@ import notificationsRoutes   from './routes/notifications.route'
 import aiCommandRoutes       from './routes/ai-command.route'
 import userAiRoutes          from './routes/user-ai.route'
 import opsRoutes             from './routes/ops.route'
+import tamadaRoutes          from './routes/tamada.route'
 import { rateLimitMiddleware } from './middleware/rate-limit'
 import { requestMetricsMiddleware } from './middleware/request-metrics'
 import { deepHealth } from './controllers/deep-health.controller'
@@ -104,6 +105,7 @@ app.use('/api/notifications', notificationsRoutes)
 app.use('/api/ai-command',   aiCommandRoutes)
 app.use('/api/user-ai',      userAiRoutes)
 app.use('/api/ops',          opsRoutes)
+app.use('/api/tamada',       tamadaRoutes)
 
 // ── 404 Fallback ─────────────────────────────────────────────────
 app.use((_: Request, res: Response) =>

@@ -52,6 +52,7 @@ const NAV_SECTIONS = [
       { id: 'feasibility', key: 'nav.feasibility', Icon: TrendingUp, path: '/dashboard/feasibility', roles: ['admin'] },
       { id: 'readiness', key: 'nav.readiness', Icon: Sunrise, path: '/dashboard/readiness', roles: ['admin'] },
       { id: 'ingest', key: 'nav.ingest', Icon: Upload, path: '/dashboard/ingest', roles: ['admin', 'it', 'finance'] },
+      { id: 'taxonomy', key: 'nav.taxonomy', Icon: Database, path: '/dashboard/taxonomy', roles: ['admin', 'it', 'finance', 'hr'] },
       { id: 'audit', key: 'nav.audit', Icon: Activity, path: '/dashboard/audit', roles: ['admin', 'it', 'hr'] },
       { id: 'settings', key: 'nav.settings', Icon: Settings, path: '/dashboard/settings', roles: ['admin', 'it'] },
     ],

@@ -290,4 +290,12 @@ export const api = {
   // ── L6 Readiness & CEO ─────────────────────────────────────────
   getReadiness: () => request<any>('/api/health/readiness'),
   getCeoBrief: () => request<any>('/api/ceo/brief'),
+
+  // ── Tamada Taxonomy v2.0 ───────────────────────────────────────
+  getTamadaTaxonomy: (domain?: string) =>
+    request<any>(`/api/tamada/taxonomy${domain ? `?domain=${domain}` : ''}`),
+  getTamadaEntities: () => request<any>('/api/tamada/entities'),
+  getTamadaBranches: () => request<any>('/api/tamada/branches'),
+  getTamadaIngestMapping: () => request<any>('/api/tamada/ingest-mapping'),
+  seedTamada: () => request<any>('/api/tamada/seed', { method: 'POST' }),
 }

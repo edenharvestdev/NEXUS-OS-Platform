@@ -1,5 +1,6 @@
 import { queryAll, queryOne, run, newId } from './db'
 import { INDUSTRY_LIST, getTemplate } from './industry-templates'
+import { getDictionaryTargetCount, applyTamadaFullSeed } from './tamada-seed'
 import { writeAudit } from './audit'
 import {
   ONBOARDING_PHASES,
@@ -94,6 +95,10 @@ export async function syncOnboardingCompletion(companyId: string): Promise<void>
 }
 
 async function loadSignals(companyId: string) {
+  const dictTarget = await getDictionaryTargetCount(companyId)
+  const company = await queryOne('SELECT industry FROM companies WHERE id = $1', [companyId])
+  const ind = String(company?.industry || '').toLowerCase()
+  const deptTarget = ind.includes('tamada') || ind.includes('sdx') ? 10 : 7
   const dictCount = Number((await queryOne('SELECT COUNT(*) as c FROM data_dictionary WHERE company_id = $1', [companyId]))?.c || 0)
   const dictWithFormula = Number((await queryOne(
     `SELECT COUNT(*) as c FROM data_dictionary WHERE company_id = $1 AND formula IS NOT NULL AND formula != '' AND formula != '—'`,
@@ -119,10 +124,12 @@ async function loadSignals(companyId: string) {
 
   return {
     dictionary: dictCount,
-    dictionary_full: dictCount >= CLINIC_DICTIONARY_SEED.length,
+    dictTarget,
+    dictionary_full: dictCount >= dictTarget,
     dictionary_formula: dictWithFormula >= Math.min(dictCount, 8),
     dictionary_tier: dictWithTier >= dictCount && dictCount > 0,
     departments: deptCount,
+    deptTarget,
     users: userCount,
     knowledge: knowledgeCount,
     deptCount,
@@ -141,7 +148,7 @@ async function loadSignals(companyId: string) {
 function autoCompleteTask(autoKey: string | undefined, s: Awaited<ReturnType<typeof loadSignals>>, meta: Record<string, unknown>): TaskStatus {
   if (!autoKey) return 'pending'
   switch (autoKey) {
-    case 'departments': return s.deptCount >= 7 ? 'done' : s.deptCount >= 1 ? 'in_progress' : 'pending'
+    case 'departments': return s.deptCount >= (s.deptTarget || 7) ? 'done' : s.deptCount >= 1 ? 'in_progress' : 'pending'
     case 'workflow': return s.knowledgeCount >= 2 ? 'done' : s.knowledgeCount >= 1 ? 'in_progress' : 'pending'
     case 'sources': return meta.sources_done ? 'done' : 'pending'
     case 'dictionary_full': return s.dictionary_full ? 'done' : s.dictionary >= 4 ? 'in_progress' : 'pending'
@@ -245,7 +252,9 @@ export async function getOnboardingState(companyId: string) {
     workbook: WORKBOOK_GUIDE,
     progress: {
       dictionary: signals.dictionary,
+      dictionary_target: signals.dictTarget,
       departments: signals.deptCount,
+      departments_target: signals.deptTarget,
       users: signals.userCount,
       knowledge: signals.knowledgeCount,
       work_logs: signals.workLogCount,
@@ -278,6 +287,22 @@ export async function setIndustry(companyId: string, industry: string, userId: s
 }
 
 export async function applyTemplate(companyId: string, industry: string, userId: string) {
+  if (industry === 'tamada') {
+    const seeded = await applyTamadaFullSeed(companyId, userId)
+    await run(
+      `INSERT INTO knowledge_items (id, company_id, user_id, layer, title, content, category, security_tier)
+       VALUES ($1,$2,$3,'People',$4,$5,'JD','T1')`,
+      [newId(), companyId, userId, 'Job Description — Tamada & SDX', 'Template JD จาก Data-Driven Org PDF — แก้ไขตาม role'],
+    )
+    await run(
+      `UPDATE onboarding_state SET industry = $1, step = 3, updated_at = $2 WHERE company_id = $3`,
+      ['tamada', new Date().toISOString(), companyId],
+    )
+    await writeAudit({ companyId, userId, action: 'onboarding_apply_template', resource: 'onboarding', meta: { industry: 'tamada', ...seeded } })
+    await syncOnboardingCompletion(companyId)
+    return { applied: 'tamada', ...seeded, sops: seeded.knowledge }
+  }
+
   const tpl = getTemplate(industry)
   for (const m of tpl.dictionary) {
     const dup = await queryOne('SELECT id FROM data_dictionary WHERE company_id = $1 AND metric_key = $2', [companyId, m.metric_key])

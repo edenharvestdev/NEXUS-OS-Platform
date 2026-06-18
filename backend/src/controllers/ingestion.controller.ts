@@ -5,7 +5,7 @@ import { writeAudit } from '../lib/audit'
 export async function importData(req: Request, res: Response): Promise<void> {
   const { csv, target = 'transactions' } = req.body
   if (!csv?.trim()) { res.status(400).json({ error: 'csv content required' }); return }
-  const allowed = ['transactions', 'employees', 'dictionary', 'pos']
+  const allowed = ['transactions', 'employees', 'dictionary', 'pos', 'kpi', 'branches', 'tamada_taxonomy']
   if (!allowed.includes(target)) { res.status(400).json({ error: 'Invalid target' }); return }
 
   const result = await importCSV(req.user.company_id, req.user.id, csv, target)
