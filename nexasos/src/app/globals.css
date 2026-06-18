@@ -1,0 +1,88 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { margin: 0; padding: 0; overflow-x: hidden; font-family: 'Montserrat', sans-serif; -webkit-font-smoothing: antialiased; }
+input, button, textarea, select { font-family: inherit; }
+
+/* Theme Transitions */
+* { transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), color 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+
+/* Custom Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(128, 128, 128, 0.3); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(128, 128, 128, 0.5); }
+
+/* Premium Keyframe Animations */
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes slideInR { from { opacity: 0; transform: translateX(30px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes slideInL { from { opacity: 0; transform: translateX(-30px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes pulse { 0% { transform: scale(1); opacity: 0.6; } 50% { transform: scale(1.1); opacity: 1; } 100% { transform: scale(1); opacity: 0.6; } }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+/* 3D Spinning Logo */
+@keyframes spin3D {
+  0% { transform: rotateX(15deg) rotateY(0deg) translateY(0); }
+  50% { transform: rotateX(25deg) rotateY(180deg) translateY(-20px); }
+  100% { transform: rotateX(15deg) rotateY(360deg) translateY(0); }
+}
+
+/* 3D Background Floating Animations */
+@keyframes float1 {
+  0% { transform: translate(0, 0) scale(1) rotate(0deg); }
+  33% { transform: translate(5%, -5%) scale(1.05) rotate(2deg); }
+  66% { transform: translate(-2%, 4%) scale(0.95) rotate(-1deg); }
+  100% { transform: translate(0, 0) scale(1) rotate(0deg); }
+}
+
+@keyframes float2 {
+  0% { transform: translate(0, 0) scale(1) rotate(0deg); }
+  33% { transform: translate(-4%, 6%) scale(1.1) rotate(-2deg); }
+  66% { transform: translate(3%, -3%) scale(0.9) rotate(1deg); }
+  100% { transform: translate(0, 0) scale(1) rotate(0deg); }
+}
+
+@keyframes float3 {
+  0% { transform: translate(0, 0) scale(1) rotate(0deg); }
+  33% { transform: translate(6%, 2%) scale(0.9) rotate(3deg); }
+  66% { transform: translate(-5%, -4%) scale(1.05) rotate(-2deg); }
+  100% { transform: translate(0, 0) scale(1) rotate(0deg); }
+}
+
+/* 3D Glassmorphism Utilities */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 30px 60px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.1);
+}
+
+.light-mode .glass-panel {
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 30px 60px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,1);
+}
+
+.perspective-container {
+  perspective: 1200px;
+}
+
+.rotate-3d-hover {
+  transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transform-style: preserve-3d;
+}
+.rotate-3d-hover:hover {
+  transform: rotateX(5deg) rotateY(-5deg) translateZ(10px);
+}
+
+/* Remove autofill background */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px transparent inset;
+  transition: background-color 9999s ease-in-out 0s;
+  -webkit-text-fill-color: inherit;
+}

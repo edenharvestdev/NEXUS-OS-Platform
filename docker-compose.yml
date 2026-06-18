@@ -1,0 +1,51 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: nexus
+      POSTGRES_PASSWORD: nexus
+      POSTGRES_DB: nexasos
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nexus -d nexasos"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build: ./backend
+    ports:
+      - "4000:4000"
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      DATABASE_URL: postgres://nexus:nexus@postgres:5432/nexasos
+      JWT_SECRET: ${JWT_SECRET:-dev-jwt-change-me}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-dev-encryption-key-32chars!!}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      TYPHOON_API_KEY: ${TYPHOON_API_KEY:-}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - api_data:/app/data
+
+  web:
+    build:
+      context: ./nexasos
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:4000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+
+volumes:
+  pgdata:
+  api_data:

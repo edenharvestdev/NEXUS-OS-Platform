@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
+backend/.env
+nexasos/.env.local
+
+# Build output
+backend/dist/
+nexasos/.next/
+nexasos/out/
+frontend/.next/
+frontend/out/
+
+# Local data (SQLite, backups, uploads)
+backend/data/*.db
+backend/data/*.db-*
+backend/data/backups/
+backend/data/storage/
+
+# OS / IDE
+.DS_Store
+*.log
+.idea/
+.vscode/
+*.swp
+
+# Test / cache
+coverage/
+.turbo/
+.vercel/
