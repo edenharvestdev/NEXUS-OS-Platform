@@ -10,12 +10,12 @@
     "setup": "bash scripts/setup.sh",
     "build:frontend": "cd nexasos && npm run build",
     "build:backend": "cd backend && npm run build",
-    "build": "npm run install:all && npm run build:backend",
+    "build": "sh scripts/railway-build.sh",
     "test": "cd backend && npm test",
     "test:backend": "cd backend && npm test",
     "start:frontend": "cd nexasos && npm run start",
     "start:backend": "cd backend && npm start",
-    "start": "npm run start:backend"
+    "start": "sh scripts/railway-start.sh"
   },
   "devDependencies": {
     "concurrently": "^8.0.0"
