@@ -2,7 +2,9 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Eye, EyeOff, Sun, Moon, Languages, Cpu, Shield, Zap } from 'lucide-react'
-import { login, register, setToken, setCachedUser } from '@/lib/users'
+import { login, register } from '@/lib/users'
+import { getPostLoginRoute } from '@/lib/rbac'
+import { api } from '@/lib/api'
 import { useAppData } from '@/lib/data'
 import { useApp } from '@/lib/theme'
 import AnimatedBackground from '@/components/AnimatedBackground'
@@ -85,7 +87,12 @@ export default function LoginPage() {
     const result = await login(email, password)
     if (result.success) {
       await refresh()
-      router.push('/dashboard')
+      let dest = getPostLoginRoute(result.user?.role)
+      try {
+        const ob = await api.getOnboarding()
+        dest = getPostLoginRoute(result.user?.role, ob)
+      } catch { /* use default */ }
+      router.push(dest)
     } else {
       setError(result.error || 'เข้าสู่ระบบไม่ได้')
       setLoading(false)

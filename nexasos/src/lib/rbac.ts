@@ -19,12 +19,13 @@ export const MODULE_ACCESS: Record<string, string[]> = {
   feasibility:  ['admin'],
   audit:        ['admin', 'it', 'hr'],
   ingest:       ['admin', 'it', 'finance'],
+  taxonomy:     ['admin', 'it'],
   dictionary:   ['admin', 'it', 'hr', 'finance', 'sales', 'marketing', 'staff'],
   mydata:       ['admin', 'hr', 'finance', 'sales', 'marketing', 'it', 'staff'],
   myai:         ['admin', 'hr', 'finance', 'sales', 'marketing', 'it', 'staff'],
   deptai:       ['admin', 'hr', 'finance', 'sales', 'marketing', 'it', 'staff'],
   onboarding:   ['admin', 'hr', 'finance', 'sales', 'marketing', 'it', 'staff'],
-  memory:       ['admin', 'hr', 'finance', 'sales', 'marketing', 'it', 'staff'],
+  memory:       ['admin', 'it'],
   readiness:    ['admin'],
   ceo:          ['admin'],
 }
@@ -39,16 +40,26 @@ export function canAccessModule(role: string | undefined, module: string): boole
   return MODULE_ACCESS[module]?.includes(r) ?? false
 }
 
+/** Best landing page after login — dept-first for non-admin users */
 export function getDefaultRoute(role?: string): string {
   const r = normalizeRole(role)
-  if (r === 'admin') return '/dashboard'
+  if (r === 'admin') return '/dashboard/readiness'
   if (r === 'staff') return '/dashboard/staff'
-  const order = ['mydata', 'myai', 'deptai', 'onboarding', 'memory', 'dashboard', 'people', 'finance', 'sales', 'marketing', 'meeting', 'gpt', 'guardian', 'ai', 'worklog', 'skills', 'settings']
-  for (const mod of order) {
-    if (canAccessModule(r, mod)) {
-      if (mod === 'dashboard') return '/dashboard'
-      return `/dashboard/${mod}`
-    }
+  const deptHome: Record<string, string> = {
+    finance: '/dashboard/finance',
+    sales: '/dashboard/sales',
+    marketing: '/dashboard/marketing',
+    hr: '/dashboard/people',
+    it: '/dashboard/ai',
   }
+  if (deptHome[r]) return deptHome[r]
+  if (canAccessModule(r, 'mydata')) return '/dashboard/my-data'
   return '/dashboard/worklog'
+}
+
+/** Send new/incomplete orgs to setup wizard first */
+export function getPostLoginRoute(role?: string, onboarding?: { completed?: number | boolean; task_board?: { progress_pct?: number } }): string {
+  const incomplete = onboarding && !onboarding.completed && (onboarding.task_board?.progress_pct ?? 0) < 100
+  if (incomplete && canAccessModule(role, 'onboarding')) return '/dashboard/onboarding'
+  return getDefaultRoute(role)
 }

@@ -13,8 +13,6 @@ nexasos/.env.local
 backend/dist/
 nexasos/.next/
 nexasos/out/
-frontend/.next/
-frontend/out/
 
 # Local data (SQLite, backups, uploads)
 backend/data/*.db

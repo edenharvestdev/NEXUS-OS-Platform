@@ -13,7 +13,6 @@ export default function SettingsPage() {
   const { colors: C } = useApp()
   const router = useRouter()
   const [activeTab, setActiveTab] = useState('company')
-  const [modules, setModules] = useState({people:true,finance:true,sales:true,marketing:true,meeting:true,gpt:true,guardian:true,ai:true})
   const [theme, setTheme] = useState({dark:true,primary:'#C4956A',notif:true,lang:'th'})
   const [company, setCompany] = useState({name:'',type:'',tax:'',address:'',size:''})
   const [profile, setProfile] = useState({name:'',email:'',phone:'',role:'', email_notify: true, line_user_id: ''})
@@ -48,7 +47,6 @@ export default function SettingsPage() {
         email_notify: res.profile?.email_notify !== 0,
         line_user_id: res.profile?.line_user_id || '',
       })
-      if (res.settings?.modules) setModules(res.settings.modules)
       if (res.settings?.theme) setTheme(res.settings.theme)
     }).catch(() => showToast('โหลด settings ไม่สำเร็จ', 'error'))
       .finally(() => setLoading(false))
@@ -97,14 +95,6 @@ export default function SettingsPage() {
     } catch (e: any) { showToast(e.message, 'error') }
   }
 
-  const saveModules = async (next: typeof modules) => {
-    setModules(next)
-    try {
-      await api.updatePreferences({ modules: next })
-      showToast('บันทึก Modules สำเร็จ')
-    } catch (e: any) { showToast(e.message, 'error') }
-  }
-
   const saveThemePrefs = async () => {
     try {
       await api.updatePreferences({ theme })
@@ -131,10 +121,6 @@ export default function SettingsPage() {
 
   if (loading) return <div style={{ color: C.text3, padding: 24 }}>Loading...</div>
 
-  const modLabels: Record<string,string> = {people:'HR & People',finance:'Finance Center',sales:'Sales Copilot',marketing:'Marketing Studio',meeting:'Meeting Brain',gpt:'Company GPT',guardian:'Doc Guardian',ai:'AI Control Tower'}
-  const modIcons: Record<string,string> = {people:'users',finance:'dollar',sales:'target',marketing:'mail',meeting:'video',gpt:'msg',guardian:'shield',ai:'cpu'}
-  const modColors: Record<string,string> = {people:C.green,finance:C.gold,sales:C.blue,marketing:C.purple,meeting:C.gold,gpt:C.gold,guardian:C.red,ai:C.blue}
-
   return (
     <div style={{display:'flex',flexDirection:'column',gap:16,animation:'fadeIn 0.3s ease'}}>
       <div style={{fontSize:18,fontWeight:800,color:C.text}}>Settings</div>
@@ -142,7 +128,6 @@ export default function SettingsPage() {
         {id:'company',icon:'home',label:'บริษัท'},
         {id:'dictionary',icon:'grid',label:'L0 Dictionary'},
         {id:'profile',icon:'users',label:'โปรไฟล์'},
-        {id:'modules',icon:'grid',label:'Modules'},
         {id:'theme',icon:'eye',label:'ธีม'},
         {id:'security',icon:'lock',label:'ความปลอดภัย'},
       ]} active={activeTab} onChange={setActiveTab}/>
@@ -187,7 +172,7 @@ export default function SettingsPage() {
           </div>
           <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,overflow:'hidden'}}>
             {dictionary.length===0 ? (
-              <div style={{padding:32,textAlign:'center',color:C.text3,fontSize:13}}>ยังไม่มี metric — seed คลินิกจะมี 4 KPI อัตโนมัติ</div>
+              <div style={{padding:32,textAlign:'center',color:C.text3,fontSize:13}}>ยังไม่มี metric — ใช้ Setup Wizard เลือก Tamada template</div>
             ) : dictionary.map(m=>(
               <div key={m.id||m.metric_key} style={{padding:'14px 18px',borderBottom:`1px solid ${C.border}`}}>
                 <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:12,flexWrap:'wrap'}}>
@@ -253,23 +238,6 @@ export default function SettingsPage() {
               <button onClick={saveProfile} style={{padding:'10px 24px',borderRadius:10,background:`linear-gradient(135deg,${C.gold},${C.gold2})`,border:'none',color:'#fff',cursor:'pointer',fontSize:13,fontWeight:700}}>บันทึก</button>
             </div>
           </div>
-        </div>
-      )}
-
-      {activeTab==='modules'&&(
-        <div style={{maxWidth:520,display:'flex',flexDirection:'column',gap:8}}>
-          {Object.entries(modules).map(([k,v])=>(
-            <div key={k} style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:12,padding:'14px 16px',display:'flex',alignItems:'center',gap:12,transition:'all 0.2s'}}>
-              <div style={{width:38,height:38,borderRadius:10,background:v?`${modColors[k]}22`:'rgba(255,255,255,0.04)',display:'flex',alignItems:'center',justifyContent:'center'}}>
-                <Ic n={modIcons[k]} s={18} c={v?modColors[k]:C.text3}/>
-              </div>
-              <div style={{flex:1}}>
-                <div style={{fontSize:13,fontWeight:600,color:v?C.text:C.text3}}>{modLabels[k]}</div>
-                <div style={{fontSize:10,color:C.text3,marginTop:1}}>{v?'เปิดใช้งาน':'ปิด'}</div>
-              </div>
-              <Toggle val={v} onChange={nv=>{saveModules({...modules,[k]:nv});showToast(`${nv?'เปิด':'ปิด'} ${modLabels[k]} แล้ว`);}}/>
-            </div>
-          ))}
         </div>
       )}
 

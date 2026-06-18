@@ -5,15 +5,8 @@ const USER_KEY = 'nexasos_user'
 
 function migrateLegacyKeys() {
   if (typeof window === 'undefined') return
-  const legacyToken = localStorage.getItem('autosoft_token')
-  const legacyUser = localStorage.getItem('autosoft_user')
-  if (legacyToken && !localStorage.getItem(TOKEN_KEY)) {
-    localStorage.setItem(TOKEN_KEY, legacyToken)
-    localStorage.removeItem('autosoft_token')
-  }
-  if (legacyUser && !localStorage.getItem(USER_KEY)) {
-    localStorage.setItem(USER_KEY, legacyUser)
-    localStorage.removeItem('autosoft_user')
+  for (const legacy of ['autosoft_token', 'autosoft_user']) {
+    localStorage.removeItem(legacy)
   }
 }
 

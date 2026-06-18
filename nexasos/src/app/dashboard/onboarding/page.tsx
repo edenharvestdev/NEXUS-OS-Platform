@@ -19,7 +19,7 @@ const STATUS_BADGE: Record<string, string> = {
 export default function OnboardingPage() {
   const { colors: C } = useApp()
   const [state, setState] = useState<any>(null)
-  const [selected, setSelected] = useState('clinic')
+  const [selected, setSelected] = useState('tamada')
   const [toast, setToast] = useState<{ msg: string; type: string } | null>(null)
   const showToast = (msg: string, type = 'success') => setToast({ msg, type })
 

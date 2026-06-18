@@ -1,11 +1,13 @@
 'use client'
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Badge, StatCard, Toast } from '@/lib/ui'
 import { useApp } from '@/lib/theme'
 import { api } from '@/lib/api'
 
 export default function ReadinessPage() {
   const { colors: C } = useApp()
+  const router = useRouter()
   const [data, setData] = useState<any>(null)
   const [ceo, setCeo] = useState<any>(null)
   const [toast, setToast] = useState<{ msg: string; type: string } | null>(null)
@@ -21,8 +23,8 @@ export default function ReadinessPage() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <div>
-        <div style={{ fontSize: 18, fontWeight: 800, color: C.text }}>Daily Readiness (L6)</div>
-        <div style={{ fontSize: 12, color: C.text3, marginTop: 4 }}>§10 — สถานะพร้อมตัดสินใจขององค์กร</div>
+        <div style={{ fontSize: 18, fontWeight: 800, color: C.text }}>สุขภาพองค์กร</div>
+        <div style={{ fontSize: 12, color: C.text3, marginTop: 4 }}>Readiness · Health Score · CEO Brief</div>
       </div>
 
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
@@ -56,6 +58,11 @@ export default function ReadinessPage() {
           <pre style={{ whiteSpace: 'pre-wrap', fontSize: 13, color: C.text2, fontFamily: 'inherit', margin: 0 }}>{ceo.brief}</pre>
         </div>
       )}
+
+      <button onClick={() => router.push('/dashboard/feasibility')}
+        style={{ alignSelf: 'flex-start', padding: '10px 16px', borderRadius: 10, border: `1px solid ${C.border}`, background: C.surface2, color: C.text2, cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
+        เปิด Feasibility Simulator →
+      </button>
 
       {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
     </div>

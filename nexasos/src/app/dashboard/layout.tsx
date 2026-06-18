@@ -4,9 +4,9 @@ import { useRouter, usePathname } from 'next/navigation'
 import {
   LayoutDashboard, Users, Wallet, Target, Megaphone,
   Mic2, MessageSquare, ShieldCheck, Zap, Settings,
-  Bell, Search, ChevronLeft, ChevronRight,
+  Bell, ChevronLeft, ChevronRight,
   Sun, Moon, Languages, LogOut, Menu, ClipboardList,
-  TrendingUp, Upload, Award, Activity, Database, Sparkles, Brain, Sunrise,
+  Upload, Award, Activity, Database, Sparkles, Brain, Sunrise,
 } from 'lucide-react'
 import { getUser, logout, refreshUser } from '@/lib/users'
 import { canAccessModule, getDefaultRoute } from '@/lib/rbac'
@@ -15,44 +15,42 @@ import { useApp } from '@/lib/theme'
 
 const NAV_SECTIONS = [
   {
-    titleKey: 'nav.section.self',
+    titleKey: 'nav.section.daily',
     items: [
       { id: 'mydata', key: 'nav.mydata', Icon: Database, path: '/dashboard/my-data', roles: ['admin', 'hr', 'finance', 'sales', 'marketing', 'it', 'staff'] },
+      { id: 'worklog', key: 'nav.worklog', Icon: ClipboardList, path: '/dashboard/worklog', roles: ['admin', 'hr', 'finance', 'sales', 'marketing', 'it', 'staff'] },
       { id: 'myai', key: 'nav.myai', Icon: MessageSquare, path: '/dashboard/my-ai', roles: ['admin', 'hr', 'finance', 'sales', 'marketing', 'it', 'staff'] },
       { id: 'deptai', key: 'nav.deptai', Icon: Users, path: '/dashboard/dept-ai', roles: ['admin', 'hr', 'finance', 'sales', 'marketing', 'it', 'staff'] },
-      { id: 'onboarding', key: 'nav.onboarding', Icon: Sparkles, path: '/dashboard/onboarding', roles: ['admin', 'hr', 'finance', 'sales', 'marketing', 'it', 'staff'] },
-      { id: 'memory', key: 'nav.memory', Icon: Brain, path: '/dashboard/memory', roles: ['admin', 'hr', 'finance', 'sales', 'marketing', 'it', 'staff'] },
-    ],
-  },
-  {
-    titleKey: 'nav.section.modules',
-    items: [
-      { id: 'dashboard', key: 'nav.dashboard', Icon: LayoutDashboard, path: '/dashboard', roles: ['admin'] },
-      { id: 'staff', key: 'nav.staff', Icon: LayoutDashboard, path: '/dashboard/staff', roles: ['staff'] },
-      { id: 'people',    key: 'nav.people',    Icon: Users,            path: '/dashboard/people', roles: ['admin', 'hr'] },
-      { id: 'finance',   key: 'nav.finance',   Icon: Wallet,           path: '/dashboard/finance', roles: ['admin', 'finance'] },
-      { id: 'sales',     key: 'nav.sales',     Icon: Target,           path: '/dashboard/sales', roles: ['admin', 'sales'] },
-      { id: 'marketing', key: 'nav.marketing', Icon: Megaphone,        path: '/dashboard/marketing', roles: ['admin', 'marketing'] },
-    ],
-  },
-  {
-    titleKey: 'nav.section.ai',
-    items: [
-      { id: 'meeting',  key: 'nav.meeting',  Icon: Mic2,         path: '/dashboard/meeting', roles: ['admin', 'finance', 'hr', 'it', 'sales'] },
-      { id: 'gpt',      key: 'nav.gpt',      Icon: MessageSquare,path: '/dashboard/gpt',     roles: ['admin'] },
-      { id: 'guardian', key: 'nav.guardian', Icon: ShieldCheck,  path: '/dashboard/guardian',roles: ['admin', 'finance', 'it'] },
-      { id: 'ai',       key: 'nav.ai',       Icon: Zap,          path: '/dashboard/ai',      roles: ['admin', 'it'] },
-    ],
-  },
-  {
-    titleKey: 'nav.section.system',
-    items: [
-      { id: 'worklog', key: 'nav.worklog', Icon: ClipboardList, path: '/dashboard/worklog', roles: ['admin', 'hr', 'finance', 'sales', 'marketing', 'it', 'staff'] },
       { id: 'skills', key: 'nav.skills', Icon: Award, path: '/dashboard/skills', roles: ['admin', 'hr', 'it', 'staff'] },
-      { id: 'feasibility', key: 'nav.feasibility', Icon: TrendingUp, path: '/dashboard/feasibility', roles: ['admin'] },
+    ],
+  },
+  {
+    titleKey: 'nav.section.dept',
+    items: [
+      { id: 'staff', key: 'nav.staff', Icon: LayoutDashboard, path: '/dashboard/staff', roles: ['staff'] },
+      { id: 'people', key: 'nav.people', Icon: Users, path: '/dashboard/people', roles: ['admin', 'hr'] },
+      { id: 'finance', key: 'nav.finance', Icon: Wallet, path: '/dashboard/finance', roles: ['admin', 'finance'] },
+      { id: 'sales', key: 'nav.sales', Icon: Target, path: '/dashboard/sales', roles: ['admin', 'sales'] },
+      { id: 'marketing', key: 'nav.marketing', Icon: Megaphone, path: '/dashboard/marketing', roles: ['admin', 'marketing'] },
+    ],
+  },
+  {
+    titleKey: 'nav.section.tools',
+    items: [
+      { id: 'meeting', key: 'nav.meeting', Icon: Mic2, path: '/dashboard/meeting', roles: ['admin', 'finance', 'hr', 'it', 'sales'] },
+      { id: 'guardian', key: 'nav.guardian', Icon: ShieldCheck, path: '/dashboard/guardian', roles: ['admin', 'finance', 'it'] },
+      { id: 'gpt', key: 'nav.gpt', Icon: MessageSquare, path: '/dashboard/gpt', roles: ['admin'] },
+      { id: 'ai', key: 'nav.ai', Icon: Zap, path: '/dashboard/ai', roles: ['admin', 'it'] },
+    ],
+  },
+  {
+    titleKey: 'nav.section.admin',
+    items: [
+      { id: 'onboarding', key: 'nav.onboarding', Icon: Sparkles, path: '/dashboard/onboarding', roles: ['admin', 'hr', 'it'] },
       { id: 'readiness', key: 'nav.readiness', Icon: Sunrise, path: '/dashboard/readiness', roles: ['admin'] },
       { id: 'ingest', key: 'nav.ingest', Icon: Upload, path: '/dashboard/ingest', roles: ['admin', 'it', 'finance'] },
-      { id: 'taxonomy', key: 'nav.taxonomy', Icon: Database, path: '/dashboard/taxonomy', roles: ['admin', 'it', 'finance', 'hr'] },
+      { id: 'taxonomy', key: 'nav.taxonomy', Icon: Database, path: '/dashboard/taxonomy', roles: ['admin', 'it'] },
+      { id: 'memory', key: 'nav.memory', Icon: Brain, path: '/dashboard/memory', roles: ['admin', 'it'] },
       { id: 'audit', key: 'nav.audit', Icon: Activity, path: '/dashboard/audit', roles: ['admin', 'it', 'hr'] },
       { id: 'settings', key: 'nav.settings', Icon: Settings, path: '/dashboard/settings', roles: ['admin', 'it'] },
     ],
@@ -114,7 +112,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const { theme, lang, toggleTheme, toggleLang, t, colors } = useApp()
   const [user, setUser] = useState<any>(null)
   const [collapsed, setCollapsed] = useState(false)
-  const [search, setSearch] = useState('')
   const [notifOpen, setNotifOpen] = useState(false)
   const [notifications, setNotifications] = useState<any[]>([])
   const [unread, setUnread] = useState(0)
@@ -130,6 +127,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       }
       if (u.role?.toLowerCase() === 'staff' && pathname === '/dashboard') {
         router.push('/dashboard/staff')
+      }
+      if (u.role?.toLowerCase() === 'admin' && pathname === '/dashboard') {
+        router.push('/dashboard/readiness')
       }
     })
   }, [router, pathname])
@@ -199,8 +199,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <div style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
               <div style={{ fontSize: 14, fontWeight: 800, color: colors.text, letterSpacing: 1.5, whiteSpace: 'nowrap', lineHeight: 1.2 }}>NEXUS OS</div>
               <div style={{ fontSize: 8, color: colors.text3, letterSpacing: 1.5, whiteSpace: 'nowrap', marginTop: 2 }}>Data First → AI Later</div>
-              <div style={{ fontSize: 9, color: colors.text3, letterSpacing: 2.5, whiteSpace: 'nowrap' }}>{t('login.tagline')}</div>
-              <div style={{ fontSize: 8, color: colors.gold, marginTop: 4, fontWeight: 900, opacity: 0.8, letterSpacing: 1 }}>GEMINI · CLAUDE · TYPHOON</div>
             </div>
           )}
         </div>
@@ -319,23 +317,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             {t(activeItem.key)}
           </span>
 
-          {/* Search */}
-          <div style={{ flex: 1, maxWidth: 480, position: 'relative', marginLeft: 16 }}>
-            <Search size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: colors.text3, pointerEvents: 'none' }} />
-            <input value={search} onChange={e => setSearch(e.target.value)}
-              placeholder={t('header.search')}
-              style={{
-                width: '100%', padding: '10px 16px 10px 40px',
-                background: colors.surface2, border: `1px solid ${colors.border2}`,
-                borderRadius: 12, color: colors.text, fontFamily: 'Montserrat', fontSize: 13,
-                outline: 'none', boxSizing: 'border-box', transition: 'all 0.2s',
-              }}
-              onFocus={e => { e.target.style.borderColor = colors.gold; e.target.style.boxShadow = `0 0 0 3px ${colors.gold}20`; e.target.style.background = colors.surface }}
-              onBlur={e => { e.target.style.borderColor = colors.border2; e.target.style.boxShadow = 'none'; e.target.style.background = colors.surface2 }}
-            />
-          </div>
-
-          {/* Right Controls */}
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12 }}>
 
             {/* Language Toggle */}
