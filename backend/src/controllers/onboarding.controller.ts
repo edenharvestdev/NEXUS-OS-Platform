@@ -9,6 +9,7 @@ import {
   getWorkbookTemplate,
   evaluateSecurityChecklist,
   confirmDecisionRights,
+  completeOnboarding,
 } from '../lib/onboarding'
 
 export async function getState(req: Request, res: Response): Promise<void> {
@@ -60,6 +61,15 @@ export async function addDepartment(req: Request, res: Response): Promise<void> 
   if (!name?.trim()) { res.status(400).json({ error: 'name required' }); return }
   const dept = await createDepartment(req.user.company_id, name.trim(), req.user.id)
   res.status(201).json(dept)
+}
+
+export async function complete(req: Request, res: Response): Promise<void> {
+  if (!['admin', 'hr', 'it'].includes(req.user.role)) {
+    res.status(403).json({ error: 'Admin only' })
+    return
+  }
+  await completeOnboarding(req.user.company_id, req.user.id)
+  res.json(await getOnboardingState(req.user.company_id))
 }
 
 export async function setDecisionRights(req: Request, res: Response): Promise<void> {

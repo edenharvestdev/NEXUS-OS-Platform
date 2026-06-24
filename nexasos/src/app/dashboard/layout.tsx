@@ -10,9 +10,8 @@ import { canAccessModule, getDefaultRoute, setExtraModules } from '@/lib/rbac'
 import { findActiveTitleKey, moduleFromPathname } from '@/lib/nav-config'
 import DashboardSidebar from '@/components/DashboardSidebar'
 import { getBottomTabs, resolveBottomTabActive } from '@/lib/mobile-nav'
-import { useIsMobile } from '@/lib/use-breakpoint'
+import { useIsMobile, useDrawerNav } from '@/lib/use-breakpoint'
 import { useApp } from '@/lib/theme'
-import AnimatedBackground from '@/components/AnimatedBackground'
 import ImpersonationBar from '@/components/ImpersonationBar'
 
 function IconBtn({
@@ -64,6 +63,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const router = useRouter()
   const pathname = usePathname()
   const isMobile = useIsMobile()
+  const drawerNav = useDrawerNav()
+  const compactMac = isMobile && !drawerNav
   const { theme, lang, toggleTheme, toggleLang, t, colors } = useApp()
   const [user, setUser] = useState<any>(null)
   const [collapsed, setCollapsed] = useState(false)
@@ -110,10 +111,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, [pathname])
 
   useEffect(() => {
-    if (!isMobile) return
+    if (!drawerNav) return
     document.body.style.overflow = drawerOpen ? 'hidden' : ''
     return () => { document.body.style.overflow = '' }
-  }, [drawerOpen, isMobile])
+  }, [drawerOpen, drawerNav])
 
   useEffect(() => {
     if (!user) return
@@ -134,7 +135,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const pageTitle = findActiveTitleKey(pathname, role, t)
   const showSettings = canAccessModule(role, 'settings')
   const bottomTabs = getBottomTabs(role)
-  const activeTabId = resolveBottomTabActive(pathname, role, drawerOpen)
+  const activeTabId = resolveBottomTabActive(pathname, role, drawerNav && drawerOpen)
 
   const navTo = (path: string) => {
     setDrawerOpen(false)
@@ -143,7 +144,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <div
-      className={`dashboard-shell${isMobile ? ' dashboard-shell--mobile' : ''}`}
+      className={`dashboard-shell${isMobile ? ' dashboard-shell--mobile' : ''}${compactMac ? ' dashboard-shell--compact' : ''}${drawerNav && drawerOpen ? ' drawer-open' : ''}`}
       style={{
         background: 'transparent',
         fontFamily: 'Montserrat, sans-serif',
@@ -152,26 +153,23 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         ['--nav-border' as string]: colors.border,
       }}
     >
-      <AnimatedBackground />
-
-      {isMobile && drawerOpen && (
-        <div
-          className="sidebar-backdrop sidebar-backdrop--open"
-          onClick={() => setDrawerOpen(false)}
-          aria-hidden
-        />
-      )}
-
       <DashboardSidebar
         user={user}
         collapsed={collapsed}
-        isMobile={isMobile}
-        drawerOpen={drawerOpen}
+        isMobile={drawerNav}
+        drawerOpen={drawerNav ? drawerOpen : true}
         onCloseDrawer={() => setDrawerOpen(false)}
       />
 
       {/* ══ MAIN ══════════════════════════════════════════════════ */}
       <div className="dashboard-main">
+        {drawerNav && drawerOpen && (
+          <div
+            className="sidebar-backdrop sidebar-backdrop--open"
+            onClick={() => setDrawerOpen(false)}
+            aria-hidden
+          />
+        )}
 
         <header
           className="dashboard-header"
@@ -182,7 +180,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             borderBottom: `1px solid ${colors.border}`,
           }}
         >
-          {isMobile ? (
+          {drawerNav ? (
             <button
               onClick={() => setDrawerOpen(true)}
               aria-label="เปิดเมนู"
@@ -193,7 +191,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           ) : (
             <button
               onClick={() => setCollapsed(!collapsed)}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: colors.text3, padding: 6, display: 'flex', flexShrink: 0 }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: colors.text3, padding: 6, display: 'flex', flexShrink: 0, minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }}
             >
               {collapsed ? <Menu size={22} /> : <ChevronLeft size={22} />}
             </button>
@@ -270,7 +268,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </div>
 
       {/* ══ BOTTOM NAV (mobile) ═════════════════════════════════════ */}
-      {isMobile && (
+      {drawerNav && (
         <nav className="mobile-bottom-nav" aria-label="เมนูหลัก">
           <div className="mobile-bottom-nav__inner">
             {bottomTabs.map(tab => {

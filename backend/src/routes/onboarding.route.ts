@@ -11,6 +11,7 @@ r.patch('/tasks/:taskId', c.patchTask)
 r.post('/industry', c.selectIndustry)
 r.post('/apply-template', c.apply)
 r.post('/step', c.step)
+r.post('/complete', c.complete)
 r.post('/department', c.addDepartment)
 r.post('/decision-rights', c.setDecisionRights)
 

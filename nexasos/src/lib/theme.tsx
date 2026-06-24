@@ -367,7 +367,6 @@ const translations: Record<Lang, Record<string, string>> = {
 }
 
 // ─── Context ──────────────────────────────────────────────────────
-import AnimatedBackground from '@/components/AnimatedBackground'
 
 const AppContext = createContext<AppContextType>({
   theme: 'dark', lang: 'th',
@@ -378,21 +377,17 @@ const AppContext = createContext<AppContextType>({
 export function AppProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<Theme>('dark')
   const [lang,  setLang]  = useState<Lang>('th')
-  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
     const savedTheme = ((localStorage.getItem('nexasos_theme') || localStorage.getItem('autosoft_theme')) as Theme) || 'dark'
     const savedLang  = ((localStorage.getItem('nexasos_lang') || localStorage.getItem('autosoft_lang')) as Lang) || 'th'
     setTheme(savedTheme)
     setLang(savedLang)
-    setMounted(true)
   }, [])
 
   useEffect(() => {
-    if (mounted) {
-      document.documentElement.className = theme === 'light' ? 'light-mode' : ''
-    }
-  }, [theme, mounted])
+    document.documentElement.className = theme === 'light' ? 'light-mode' : ''
+  }, [theme])
 
   const toggleTheme = () => {
     const next = theme === 'dark' ? 'light' : 'dark'
@@ -410,17 +405,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const colors = theme === 'dark' ? darkColors : lightColors
 
-  if (!mounted) return null
-
   return (
     <AppContext.Provider value={{ theme, lang, toggleTheme, toggleLang, t, colors }}>
-      <AnimatedBackground />
-      <div style={{
-        background: 'transparent',
-        color: colors.text,
-        minHeight: '100vh',
-        transition: 'color 0.3s',
-      }}>
+      <div
+        className="app-root"
+        style={{
+          position: 'relative',
+          zIndex: 0,
+          isolation: 'isolate',
+          background: colors.bg,
+          color: colors.text,
+          minHeight: '100vh',
+        }}
+      >
         <DataProvider>
           {children}
         </DataProvider>

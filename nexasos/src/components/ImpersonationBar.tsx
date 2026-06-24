@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { ChevronDown, UserCog, X } from 'lucide-react'
 import { api } from '@/lib/api'
 import {
@@ -33,6 +33,7 @@ export default function ImpersonationBar({
   onSessionChange: () => void
 }) {
   const router = useRouter()
+  const pathname = usePathname()
   const { colors, t } = useApp()
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -40,6 +41,19 @@ export default function ImpersonationBar({
   const impersonation = getImpersonation()
 
   const showBar = canUseImpersonation(impersonation)
+
+  useEffect(() => {
+    setOpen(false)
+  }, [pathname])
+
+  useEffect(() => {
+    if (!open) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [open])
 
   useEffect(() => {
     if (!showBar || !open) return
@@ -91,7 +105,7 @@ export default function ImpersonationBar({
       router.push(getDefaultRoute(res.user.role))
       router.refresh()
     } catch (e: any) {
-      alert(e.message || 'ออกจากโหมดสวมสิทธิ์ไม่สำเร็จ')
+      alert(e.message || 'ออกจากโหมดสวมสิทธิ์ไม่ได้')
     } finally {
       setLoading(false)
     }
@@ -101,7 +115,7 @@ export default function ImpersonationBar({
     <div
       style={{
         position: 'relative',
-        zIndex: 90,
+        zIndex: 20,
         background: active ? 'linear-gradient(90deg, #9C713B, #B48648)' : colors.surface2,
         borderBottom: `1px solid ${active ? 'rgba(255,255,255,0.2)' : colors.border}`,
         color: active ? '#fff' : colors.text2,
@@ -132,6 +146,7 @@ export default function ImpersonationBar({
           type="button"
           disabled={loading}
           onClick={() => setOpen(v => !v)}
+          aria-expanded={open}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -151,72 +166,65 @@ export default function ImpersonationBar({
         </button>
 
         {open && (
-          <>
-            <div
-              style={{ position: 'fixed', inset: 0, zIndex: 98 }}
-              onClick={() => setOpen(false)}
-              aria-hidden
-            />
-            <div
-              style={{
-                position: 'absolute',
-                top: 'calc(100% + 6px)',
-                right: 0,
-                width: 'min(320px, calc(100vw - 32px))',
-                maxHeight: 360,
-                overflowY: 'auto',
-                background: colors.surface,
-                border: `1px solid ${colors.border}`,
-                borderRadius: 12,
-                boxShadow: '0 12px 40px rgba(0,0,0,0.25)',
-                zIndex: 99,
-              }}
-            >
-              {grouped.length === 0 ? (
-                <div style={{ padding: 16, color: colors.text3, textAlign: 'center' }}>
-                  {loading ? '...' : t('impersonate.empty')}
+          <div
+            style={{
+              position: 'absolute',
+              top: 'calc(100% + 6px)',
+              right: 0,
+              width: 'min(320px, calc(100vw - 32px))',
+              maxHeight: 360,
+              overflowY: 'auto',
+              background: colors.surface,
+              border: `1px solid ${colors.border}`,
+              borderRadius: 12,
+              boxShadow: '0 12px 40px rgba(0,0,0,0.25)',
+              zIndex: 120,
+            }}
+          >
+            {grouped.length === 0 ? (
+              <div style={{ padding: 16, color: colors.text3, textAlign: 'center' }}>
+                {loading ? '...' : t('impersonate.empty')}
+              </div>
+            ) : grouped.map(([dept, members]) => (
+              <div key={dept}>
+                <div style={{
+                  padding: '8px 12px 4px',
+                  fontSize: 10,
+                  fontWeight: 700,
+                  color: colors.text3,
+                  letterSpacing: 1,
+                }}>
+                  {dept}
                 </div>
-              ) : grouped.map(([dept, members]) => (
-                <div key={dept}>
-                  <div style={{
-                    padding: '8px 12px 4px',
-                    fontSize: 10,
-                    fontWeight: 700,
-                    color: colors.text3,
-                    letterSpacing: 1,
-                  }}>
-                    {dept}
-                  </div>
-                  {members.map(m => {
-                    const isCurrent = m.id === user.id
-                    return (
-                      <button
-                        key={m.id}
-                        type="button"
-                        disabled={loading || isCurrent}
-                        onClick={() => handleSwitch(m.id)}
-                        style={{
-                          width: '100%',
-                          textAlign: 'left',
-                          padding: '10px 12px',
-                          border: 'none',
-                          borderBottom: `1px solid ${colors.border}`,
-                          background: isCurrent ? colors.surface2 : 'transparent',
-                          cursor: isCurrent ? 'default' : 'pointer',
-                          opacity: isCurrent ? 0.7 : 1,
-                        }}
-                      >
-                        <div style={{ fontSize: 13, fontWeight: 600, color: colors.text }}>{m.name}</div>
-                        <div style={{ fontSize: 11, color: colors.text3, marginTop: 2 }}>
-                          {ROLE_LABELS[m.role?.toLowerCase()] || m.role} · {m.email}
-                        </div>
-                      </button>
-                    )
-                  })}
-                </div>
-              ))}
-            </div>
-          </>
+                {members.map(m => {
+                  const isCurrent = m.id === user.id
+                  return (
+                    <button
+                      key={m.id}
+                      type="button"
+                      disabled={loading || isCurrent}
+                      onClick={() => handleSwitch(m.id)}
+                      style={{
+                        width: '100%',
+                        textAlign: 'left',
+                        padding: '10px 12px',
+                        border: 'none',
+                        borderBottom: `1px solid ${colors.border}`,
+                        background: isCurrent ? colors.surface2 : 'transparent',
+                        cursor: isCurrent ? 'default' : 'pointer',
+                        opacity: isCurrent ? 0.7 : 1,
+                      }}
+                    >
+                      <div style={{ fontSize: 13, fontWeight: 600, color: colors.text }}>{m.name}</div>
+                      <div style={{ fontSize: 11, color: colors.text3, marginTop: 2 }}>
+                        {ROLE_LABELS[m.role?.toLowerCase()] || m.role} · {m.email}
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+            ))}
+          </div>
         )}
       </div>
 

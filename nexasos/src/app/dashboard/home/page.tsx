@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { Badge, StatCard, Toast } from '@/lib/ui'
 import { useApp } from '@/lib/theme'
 import { api } from '@/lib/api'
@@ -15,13 +15,18 @@ const HR_PROMPTS = [
 
 export default function UnifiedHomePage() {
   const { colors: C, t } = useApp()
-  const router = useRouter()
   const [hub, setHub] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [clocking, setClocking] = useState(false)
   const [toast, setToast] = useState<{ msg: string; type: string } | null>(null)
-  const user = getUser()
-  const role = user?.role?.toLowerCase() || 'staff'
+  const [user, setUser] = useState<any>(null)
   const showToast = (msg: string, type = 'success') => setToast({ msg, type })
+
+  useEffect(() => {
+    setUser(getUser())
+  }, [])
+
+  const role = user?.role?.toLowerCase() || 'staff'
 
   useEffect(() => {
     api.getSelfHub()
@@ -31,6 +36,8 @@ export default function UnifiedHomePage() {
   }, [])
 
   const clockIn = async () => {
+    if (clocking) return
+    setClocking(true)
     try {
       let lat: number | undefined
       let lng: number | undefined
@@ -45,8 +52,10 @@ export default function UnifiedHomePage() {
       }
       await api.clockIn({ source: lat != null ? 'gps' : 'web', lat, lng })
       showToast('ลงเวลาเข้าแล้ว')
-      api.getSelfHub().then(setHub)
+      const fresh = await api.getSelfHub()
+      setHub(fresh)
     } catch (e: any) { showToast(e.message, 'error') }
+    finally { setClocking(false) }
   }
 
   if (loading) return <div style={{ color: C.text3, padding: 24 }}>กำลังโหลด NEXUS OS...</div>
@@ -86,16 +95,18 @@ export default function UnifiedHomePage() {
         <div style={{ fontSize: 14, fontWeight: 800, color: C.text, marginBottom: 12 }}>👤 HR & เวลางาน</div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {!att?.clock_in && (
-            <button type="button" onClick={clockIn} style={actionBtn(C)}>ลงเวลาเข้า</button>
+            <button type="button" disabled={clocking} onClick={clockIn} style={{ ...actionBtn(C), opacity: clocking ? 0.7 : 1, cursor: clocking ? 'wait' : 'pointer' }}>
+              {clocking ? 'กำลังลงเวลา...' : 'ลงเวลาเข้า'}
+            </button>
           )}
           {att?.clock_in && !att?.clock_out && (
             <button type="button" onClick={() => api.clockOut().then(() => { showToast('ลงเวลาออกแล้ว'); api.getSelfHub().then(setHub) }).catch((e: any) => showToast(e.message, 'error'))} style={actionBtn(C)}>ลงเวลาออก</button>
           )}
-          <button type="button" onClick={() => router.push('/dashboard/hr/attendance')} style={ghostBtn(C)}>ลงเวลา / QR</button>
-          <button type="button" onClick={() => router.push('/dashboard/hr/leave')} style={ghostBtn(C)}>ขอลา</button>
-          <button type="button" onClick={() => router.push('/dashboard/hr/overtime')} style={ghostBtn(C)}>ขอ OT</button>
+          <NavLink href="/dashboard/hr/attendance" style={ghostBtn(C)}>ลงเวลา / QR</NavLink>
+          <NavLink href="/dashboard/hr/leave" style={ghostBtn(C)}>ขอลา</NavLink>
+          <NavLink href="/dashboard/hr/overtime" style={ghostBtn(C)}>ขอ OT</NavLink>
           {slip && (
-            <button type="button" onClick={() => router.push(`/dashboard/hr/payroll/${user?.id}?period=${slip.period_id}`)} style={ghostBtn(C)}>ดูสลิป</button>
+            <NavLink href={`/dashboard/hr/payroll/${user?.id}?period=${slip.period_id}`} style={ghostBtn(C)}>ดูสลิป</NavLink>
           )}
         </div>
         {hr.leave_quotas?.length > 0 && (
@@ -114,9 +125,9 @@ export default function UnifiedHomePage() {
         <section style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 16, padding: 18 }}>
           <div style={{ fontSize: 14, fontWeight: 800, color: C.text, marginBottom: 12 }}>📋 งาน & ข้อมูล</div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
-            <button type="button" onClick={() => router.push('/dashboard/worklog')} style={ghostBtn(C)}>บันทึกงาน</button>
-            <button type="button" onClick={() => router.push('/dashboard/my-data')} style={ghostBtn(C)}>ข้อมูลของฉัน</button>
-            <button type="button" onClick={() => router.push('/dashboard/work/todos')} style={ghostBtn(C)}>Todo</button>
+            <NavLink href="/dashboard/worklog" style={ghostBtn(C)}>บันทึกงาน</NavLink>
+            <NavLink href="/dashboard/my-data" style={ghostBtn(C)}>ข้อมูลของฉัน</NavLink>
+            <NavLink href="/dashboard/work/todos" style={ghostBtn(C)}>Todo</NavLink>
           </div>
           {tasks.length === 0 ? (
             <div style={{ fontSize: 12, color: C.text3 }}>ไม่มีงาน AI แนะนำวันนี้</div>
@@ -132,13 +143,14 @@ export default function UnifiedHomePage() {
           <div style={{ fontSize: 14, fontWeight: 800, color: C.text, marginBottom: 12 }}>✨ ถาม AI (รู้ข้อมูล HR + งาน)</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {HR_PROMPTS.map(p => (
-              <button key={p} type="button" onClick={() => router.push(`/dashboard/my-ai?q=${encodeURIComponent(p)}`)} style={{
+              <NavLink key={p} href={`/dashboard/my-ai?q=${encodeURIComponent(p)}`} style={{
+                display: 'block',
                 textAlign: 'left', padding: '10px 12px', borderRadius: 10, border: `1px solid ${C.border2}`,
-                background: C.bg3, color: C.text2, fontSize: 12, cursor: 'pointer',
-              }}>{p}</button>
+                background: C.bg3, color: C.text2, fontSize: 12, cursor: 'pointer', textDecoration: 'none',
+              }}>{p}</NavLink>
             ))}
           </div>
-          <button type="button" onClick={() => router.push('/dashboard/my-ai')} style={{ ...actionBtn(C), marginTop: 12, width: '100%' }}>เปิดแชท AI</button>
+          <NavLink href="/dashboard/my-ai" style={{ ...actionBtn(C), marginTop: 12, width: '100%', display: 'block', textAlign: 'center', textDecoration: 'none' }}>เปิดแชท AI</NavLink>
         </section>
       </div>
 
@@ -152,10 +164,10 @@ export default function UnifiedHomePage() {
             {hr.admin.payroll_period && (
               <Badge type="green">งวด {hr.admin.payroll_period.month}/{hr.admin.payroll_period.year} · {hr.admin.payroll_period.status}</Badge>
             )}
-            <button type="button" onClick={() => router.push('/dashboard/hr/payroll')} style={ghostBtn(C)}>เงินเดือน</button>
-            <button type="button" onClick={() => router.push('/dashboard/hr/leave')} style={ghostBtn(C)}>อนุมัติลา</button>
+            <NavLink href="/dashboard/hr/payroll" style={ghostBtn(C)}>เงินเดือน</NavLink>
+            <NavLink href="/dashboard/hr/leave" style={ghostBtn(C)}>อนุมัติลา</NavLink>
             {role === 'admin' && (
-              <button type="button" onClick={() => router.push('/dashboard/readiness')} style={ghostBtn(C)}>สุขภาพองค์กร</button>
+              <NavLink href="/dashboard/readiness" style={ghostBtn(C)}>สุขภาพองค์กร</NavLink>
             )}
           </div>
         </section>
@@ -177,5 +189,14 @@ function ghostBtn(C: any): React.CSSProperties {
   return {
     padding: '8px 14px', borderRadius: 10, border: `1px solid ${C.border2}`,
     background: 'transparent', color: C.text2, fontWeight: 600, fontSize: 12, cursor: 'pointer',
+    textDecoration: 'none', display: 'inline-block',
   }
+}
+
+function NavLink({ href, style, children }: { href: string; style: React.CSSProperties; children: React.ReactNode }) {
+  return (
+    <Link href={href} style={style}>
+      {children}
+    </Link>
+  )
 }
