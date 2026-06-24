@@ -13,36 +13,42 @@ export async function getHub(req: Request, res: Response): Promise<void> {
   const today = new Date().toISOString().slice(0, 10)
   const year = new Date().getFullYear()
 
+  // Each query is wrapped so a single failure (e.g. schema drift between
+  // SQLite/Postgres or a missing optional table) degrades to empty data
+  // rather than rejecting the whole hub — the home page must always load.
+  const one = (sql: string, p: any[]) => queryOne(sql, p).catch(() => null)
+  const all = (sql: string, p: any[]) => queryAll(sql, p).catch(() => [] as any[])
+
   const [profile, capacity, dictionary, myKpis, myKnowledge, myPatients, myWorkLogs, mySkills, dailyTasks] = await Promise.all([
-    queryOne('SELECT id, name, email, role, department, phone, leave_used, leave_total FROM users WHERE id = $1', [uid]),
-    queryOne('SELECT * FROM user_capacity WHERE user_id = $1', [uid]),
-    queryAll('SELECT * FROM data_dictionary WHERE company_id = $1 ORDER BY layer', [cid]),
-    queryAll('SELECT * FROM kpi_entries WHERE user_id = $1 ORDER BY created_at DESC LIMIT 50', [uid]),
-    queryAll('SELECT * FROM knowledge_items WHERE user_id = $1 ORDER BY created_at DESC LIMIT 50', [uid]),
-    queryAll('SELECT id, consent_given, consent_at, visit_date, created_at FROM patients WHERE user_id = $1 ORDER BY created_at DESC LIMIT 20', [uid]),
-    queryAll('SELECT * FROM work_logs WHERE user_id = $1 ORDER BY created_at DESC LIMIT 20', [uid]),
-    queryAll('SELECT * FROM skill_scores WHERE user_id = $1', [uid]),
-    queryAll('SELECT * FROM daily_ai_tasks WHERE user_id = $1 AND done = 0 ORDER BY created_at DESC', [uid]),
+    one('SELECT id, name, email, role, department, phone, leave_used, leave_total FROM users WHERE id = $1', [uid]),
+    one('SELECT * FROM user_capacity WHERE user_id = $1', [uid]),
+    all('SELECT * FROM data_dictionary WHERE company_id = $1 ORDER BY layer', [cid]),
+    all('SELECT * FROM kpi_entries WHERE user_id = $1 ORDER BY created_at DESC LIMIT 50', [uid]),
+    all('SELECT * FROM knowledge_items WHERE user_id = $1 ORDER BY created_at DESC LIMIT 50', [uid]),
+    all('SELECT id, consent_given, consent_at, visit_date, created_at FROM patients WHERE user_id = $1 ORDER BY created_at DESC LIMIT 20', [uid]),
+    all('SELECT * FROM work_logs WHERE user_id = $1 ORDER BY created_at DESC LIMIT 20', [uid]),
+    all('SELECT * FROM skill_scores WHERE user_id = $1', [uid]),
+    all('SELECT * FROM daily_ai_tasks WHERE user_id = $1 AND done = 0 ORDER BY created_at DESC', [uid]),
   ])
 
-  const attendanceToday = await queryOne(
+  const attendanceToday = await one(
     'SELECT * FROM time_attendance WHERE company_id = $1 AND user_id = $2 AND work_date = $3',
     [cid, uid, today],
   )
-  const myLeavePending = await queryAll(
+  const myLeavePending = await all(
     `SELECT id, type, days, status, approve_flag, start_date FROM leave_requests WHERE company_id = $1 AND user_id = $2 ORDER BY created_at DESC LIMIT 5`,
     [cid, uid],
   )
-  const myOtPending = await queryAll(
+  const myOtPending = await all(
     `SELECT id, work_date, hours, status FROM overtime_requests WHERE company_id = $1 AND user_id = $2 ORDER BY created_at DESC LIMIT 5`,
     [cid, uid],
   )
-  const latestPayslip = await queryOne(
+  const latestPayslip = await one(
     `SELECT p.*, pp.year, pp.month FROM payslips p JOIN payroll_periods pp ON pp.id = p.period_id
      WHERE p.company_id = $1 AND p.user_id = $2 ORDER BY pp.year DESC, pp.month DESC LIMIT 1`,
     [cid, uid],
   )
-  const leaveQuotas = await queryAll(
+  const leaveQuotas = await all(
     `SELECT q.quota_days, q.used_days, lt.name as leave_name FROM employee_leave_quota q
      JOIN leave_types lt ON lt.id = q.leave_type_id
      WHERE q.company_id = $1 AND q.user_id = $2 AND q.year = $3 LIMIT 6`,
@@ -52,10 +58,10 @@ export async function getHub(req: Request, res: Response): Promise<void> {
   let hrAdmin: Record<string, unknown> | null = null
   if (['admin', 'hr', 'finance'].includes(role)) {
     const [pendingLeave, pendingOt, period, anomalies] = await Promise.all([
-      queryOne(`SELECT COUNT(*) as c FROM leave_requests WHERE company_id = $1 AND status = 'pending'`, [cid]),
-      queryOne(`SELECT COUNT(*) as c FROM overtime_requests WHERE company_id = $1 AND status = 'pending'`, [cid]),
-      queryOne(`SELECT * FROM payroll_periods WHERE company_id = $1 ORDER BY year DESC, month DESC LIMIT 1`, [cid]),
-      queryOne(
+      one(`SELECT COUNT(*) as c FROM leave_requests WHERE company_id = $1 AND status = 'pending'`, [cid]),
+      one(`SELECT COUNT(*) as c FROM overtime_requests WHERE company_id = $1 AND status = 'pending'`, [cid]),
+      one(`SELECT * FROM payroll_periods WHERE company_id = $1 ORDER BY year DESC, month DESC LIMIT 1`, [cid]),
+      one(
         `SELECT COUNT(*) as c FROM employee_daily_calendar WHERE company_id = $1 AND absence_hours > 0 AND period_id = (
           SELECT id FROM payroll_periods WHERE company_id = $1 ORDER BY year DESC, month DESC LIMIT 1
         )`,

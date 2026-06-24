@@ -37,3 +37,26 @@ export function useIsMobile(): boolean {
   const bp = useBreakpoint()
   return bp === 'mobile'
 }
+
+/** Slide-out drawer only on touch phones — MacBook keeps normal sidebar even in narrow windows */
+export function useDrawerNav(): boolean {
+  const [drawerNav, setDrawerNav] = useState(false)
+
+  useEffect(() => {
+    const update = () => {
+      const narrow = window.matchMedia('(max-width: 767px)').matches
+      const touchUi = window.matchMedia('(hover: none), (pointer: coarse)').matches
+      setDrawerNav(narrow && touchUi)
+    }
+    update()
+    window.addEventListener('resize', update)
+    const mql = window.matchMedia('(hover: none), (pointer: coarse)')
+    mql.addEventListener('change', update)
+    return () => {
+      window.removeEventListener('resize', update)
+      mql.removeEventListener('change', update)
+    }
+  }, [])
+
+  return drawerNav
+}

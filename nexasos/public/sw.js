@@ -1,5 +1,5 @@
 /* NEXUS OS — minimal service worker for PWA install + offline shell */
-const CACHE = 'nexus-os-v1'
+const CACHE = 'nexus-os-v2'
 const SHELL = ['/', '/login', '/icons/icon.svg', '/icons/icon-maskable.svg']
 
 self.addEventListener('install', (event) => {

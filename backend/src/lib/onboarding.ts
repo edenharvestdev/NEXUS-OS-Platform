@@ -354,6 +354,15 @@ export async function advanceStep(companyId: string, step: number) {
   await syncOnboardingCompletion(companyId)
 }
 
+/** Admin may skip optional workbook — unlocks full app without blocking login */
+export async function completeOnboarding(companyId: string, userId: string) {
+  await run(
+    `UPDATE onboarding_state SET completed = 1, step = 6, updated_at = $1 WHERE company_id = $2`,
+    [new Date().toISOString(), companyId],
+  )
+  await writeAudit({ companyId, userId, action: 'onboarding_skip', resource: 'onboarding' })
+}
+
 export async function updateTaskStatus(companyId: string, taskId: string, status: string) {
   const state = await queryOne('SELECT meta FROM onboarding_state WHERE company_id = $1', [companyId])
   const meta = parseMeta(state?.meta)

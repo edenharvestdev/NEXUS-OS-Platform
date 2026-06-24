@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { ChevronDown, LogOut, Settings, X } from 'lucide-react'
 import { useApp } from '@/lib/theme'
@@ -29,22 +30,32 @@ export default function DashboardSidebar({ user, collapsed, isMobile, drawerOpen
   const pathname = usePathname()
   const { colors: C, t } = useApp()
   const role = user.role?.toLowerCase() || 'staff'
-  const sections = visibleNavSections(role)
+  // Memoise: visibleNavSections() returns a fresh array every call. Without
+  // this, `sections` is a new reference each render, and the effect below
+  // (which lists it as a dependency) would run every render, setState, and
+  // loop forever — "Maximum update depth exceeded" — freezing the whole UI.
+  const sections = useMemo(() => visibleNavSections(role), [role])
   const showLabels = !collapsed || isMobile
   const showSettings = canAccessModule(role, 'settings')
 
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
-    const next: Record<string, boolean> = {}
-    for (const section of sections) {
-      for (const entry of section.entries) {
-        if (entry.kind === 'group' && isGroupActive(entry, pathname)) {
-          next[entry.id] = true
+    setExpanded(prev => {
+      let changed = false
+      const next = { ...prev }
+      for (const section of sections) {
+        for (const entry of section.entries) {
+          if (entry.kind === 'group' && isGroupActive(entry, pathname) && !next[entry.id]) {
+            next[entry.id] = true
+            changed = true
+          }
         }
       }
-    }
-    setExpanded(prev => ({ ...prev, ...next }))
+      // Return the same reference when nothing changed so React bails out
+      // instead of re-rendering (and re-triggering this effect).
+      return changed ? next : prev
+    })
   }, [pathname, role, sections])
 
   const navTo = (path: string) => {
@@ -61,11 +72,12 @@ export default function DashboardSidebar({ user, collapsed, isMobile, drawerOpen
     const active = isLinkActive(entry, pathname, role)
     const { Icon, key, id } = entry
     return (
-      <button
+      <Link
         key={id}
-        type="button"
+        href={path}
+        className="nav-drawer-link"
         title={!showLabels ? t(key) : undefined}
-        onClick={() => navTo(path)}
+        onClick={() => onCloseDrawer()}
         style={{
           width: '100%',
           display: 'flex',
@@ -74,11 +86,11 @@ export default function DashboardSidebar({ user, collapsed, isMobile, drawerOpen
           padding: showLabels ? '10px 20px' : '10px 0',
           justifyContent: showLabels ? 'flex-start' : 'center',
           cursor: 'pointer',
-          border: 'none',
           background: active ? C.goldLight : 'transparent',
           borderRight: active ? `3px solid ${C.gold}` : '3px solid transparent',
           minHeight: 44,
           textAlign: 'left',
+          textDecoration: 'none',
         }}
       >
         <Icon size={18} style={{ color: active ? C.gold : C.text3, flexShrink: 0 }} />
@@ -87,7 +99,7 @@ export default function DashboardSidebar({ user, collapsed, isMobile, drawerOpen
             {t(key)}
           </span>
         )}
-      </button>
+      </Link>
     )
   }
 
@@ -157,20 +169,21 @@ export default function DashboardSidebar({ user, collapsed, isMobile, drawerOpen
         {open && visibleChildren.map(child => {
           const active = isGroupChildActive(child.path, pathname)
           return (
-            <button
+            <Link
               key={child.id}
-              type="button"
-              onClick={() => navTo(child.path)}
+              href={child.path}
+              className="nav-drawer-link"
+              onClick={() => onCloseDrawer()}
               style={{
                 width: '100%',
                 display: 'block',
                 padding: '9px 20px 9px 50px',
-                border: 'none',
                 cursor: 'pointer',
                 textAlign: 'left',
                 background: active ? C.goldLight : 'transparent',
                 borderRadius: active ? '0 8px 8px 0' : 0,
                 marginRight: active ? 8 : 0,
+                textDecoration: 'none',
               }}
             >
               <span style={{
@@ -180,7 +193,7 @@ export default function DashboardSidebar({ user, collapsed, isMobile, drawerOpen
               }}>
                 {t(child.key)}
               </span>
-            </button>
+            </Link>
           )
         })}
       </div>
@@ -248,9 +261,10 @@ export default function DashboardSidebar({ user, collapsed, isMobile, drawerOpen
           <div style={{ fontSize: 11, color: C.text3, marginTop: 4, overflow: 'hidden', textOverflow: 'ellipsis' }}>{user.email}</div>
           <div style={{ fontSize: 10, color: C.text3, marginTop: 2 }}>Role: {user.role || 'staff'}</div>
           {showSettings && (
-            <button
-              type="button"
-              onClick={() => navTo('/dashboard/settings')}
+            <Link
+              href="/dashboard/settings"
+              className="nav-drawer-link"
+              onClick={() => onCloseDrawer()}
               style={{
                 marginTop: 10,
                 display: 'inline-flex',
@@ -263,12 +277,12 @@ export default function DashboardSidebar({ user, collapsed, isMobile, drawerOpen
                 color: C.text2,
                 fontSize: 11,
                 fontWeight: 600,
-                cursor: 'pointer',
+                textDecoration: 'none',
               }}
             >
               <Settings size={14} />
               {t('nav.settings')}
-            </button>
+            </Link>
           )}
         </div>
       )}

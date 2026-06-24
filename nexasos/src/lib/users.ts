@@ -54,12 +54,16 @@ function setImpersonation(state: ImpersonationState | null) {
 
 export async function login(email: string, password: string) {
   try {
-    const res = await api.signin(email, password)
+    const res = await api.signin(email.trim().toLowerCase(), password)
     setToken(res.token)
     setCachedUser(res.user)
     setImpersonation(null)
     return { success: true, user: res.user }
   } catch (e: any) {
+    const msg = String(e.message || '')
+    if (/failed to fetch|networkerror|load failed/i.test(msg)) {
+      return { success: false, error: 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ — ตรวจสอบอินเทอร์เน็ตแล้วลองใหม่' }
+    }
     return { success: false, error: e.message || 'เข้าสู่ระบบไม่ได้' }
   }
 }

@@ -9,6 +9,9 @@ import { useAppData } from '@/lib/data'
 import { useApp } from '@/lib/theme'
 import AnimatedBackground from '@/components/AnimatedBackground'
 
+const DEMO_EMAIL = 'admin@demo.tamada'
+const DEMO_PASSWORD = 'Demo2026!'
+
 const FEATURES = [
   { Icon: Cpu,    titleKey: 'feat.ai_title',    subKey: 'feat.ai_sub',    dot: '#C4956A' },
   { Icon: Shield, titleKey: 'feat.sec_title',   subKey: 'feat.sec_sub',   dot: '#4CAF7D' },
@@ -94,7 +97,29 @@ export default function LoginPage() {
       } catch { /* use default */ }
       router.push(dest)
     } else {
-      setError(result.error || 'เข้าสู่ระบบไม่ได้')
+      const hint = lang === 'th'
+        ? ' (บัญชีทดลอง: admin@demo.tamada / Demo2026! — ตัว D ใหญ่และมี !)'
+        : ' (Demo: admin@demo.tamada / Demo2026!)'
+      setError(
+        result.error?.includes('อีเมลหรือรหัสผ่าน') || result.error?.includes('Incorrect')
+          ? `${result.error}${hint}`
+          : (result.error || 'เข้าสู่ระบบไม่ได้'),
+      )
+      setLoading(false)
+    }
+  }
+
+  const handleDemoLogin = async () => {
+    setEmail(DEMO_EMAIL)
+    setPassword(DEMO_PASSWORD)
+    setLoading(true)
+    setError('')
+    const result = await login(DEMO_EMAIL, DEMO_PASSWORD)
+    if (result.success) {
+      await refresh()
+      router.push(getPostLoginRoute(result.user?.role))
+    } else {
+      setError(result.error || 'เข้าสู่ระบบ Demo ไม่ได้')
       setLoading(false)
     }
   }
@@ -126,9 +151,9 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="login-shell perspective-container" style={{ fontFamily: 'Montserrat, sans-serif' }}>
-      
-      {/* 3D Animated Background is now globally applied via AppProvider */}
+    <>
+      <AnimatedBackground />
+      <div className="login-shell perspective-container" style={{ fontFamily: 'Montserrat, sans-serif', position: 'relative', zIndex: 1 }}>
 
       {/* Top Controls (floating) */}
       <div className="login-controls">
@@ -243,6 +268,37 @@ export default function LoginPage() {
                 <button onClick={handleSignIn} disabled={loading} style={{ ...goldBtn, opacity: loading ? 0.7 : 1, marginTop: 8 }}>
                   {loading ? <><span style={{ animation: 'spin 1s linear infinite', display: 'inline-block' }}>⟳</span> {t('login.loading')}</> : t('login.btn_in')}
                 </button>
+
+                <div style={{
+                  marginTop: 4, padding: 16, borderRadius: 14,
+                  background: `${C.gold}10`, border: `1px solid ${C.gold}33`,
+                }}>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: C.gold, marginBottom: 8 }}>
+                    {lang === 'th' ? 'บัญชีทดลอง (Demo)' : 'Demo account'}
+                  </div>
+                  <div style={{ fontSize: 12, color: C.text2, lineHeight: 1.7, marginBottom: 12 }}>
+                    <div><strong>Email:</strong> {DEMO_EMAIL}</div>
+                    <div><strong>{lang === 'th' ? 'รหัสผ่าน' : 'Password'}:</strong> <code style={{ color: C.gold, fontWeight: 700 }}>Demo2026!</code></div>
+                    {lang === 'th' && (
+                      <div style={{ fontSize: 11, color: C.text3, marginTop: 4 }}>
+                        ต้องพิมพ์ตัว D ใหญ่ และมีเครื่องหมาย ! ท้ายรหัสผ่าน
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleDemoLogin}
+                    disabled={loading}
+                    style={{
+                      width: '100%', padding: '12px 16px', borderRadius: 10,
+                      border: `1px solid ${C.gold}55`, background: C.goldLight,
+                      color: C.gold, fontWeight: 700, fontSize: 13, cursor: loading ? 'wait' : 'pointer',
+                      fontFamily: 'Montserrat', opacity: loading ? 0.7 : 1,
+                    }}
+                  >
+                    {lang === 'th' ? 'เข้าสู่ระบบ Demo ทันที' : 'Login with Demo account'}
+                  </button>
+                </div>
               </div>
             </div>
           )}
@@ -272,6 +328,7 @@ export default function LoginPage() {
           )}
         </div>
       </div>
-    </div>
+      </div>
+    </>
   )
 }

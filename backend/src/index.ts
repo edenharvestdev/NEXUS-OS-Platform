@@ -126,6 +126,18 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
   res.status(status).json({ error: message })
 })
 
+// ── Crash containment ────────────────────────────────────────────
+// Express 4 does not forward rejections from async route handlers to the
+// error middleware, so an unhandled rejection would otherwise terminate the
+// whole process — turning one bad query into a full outage (and a restart
+// crash-loop on Railway). Keep the server alive and log instead.
+process.on('unhandledRejection', (reason) => {
+  console.error('⚠️  Unhandled promise rejection (server kept alive):', reason)
+})
+process.on('uncaughtException', (err) => {
+  console.error('⚠️  Uncaught exception (server kept alive):', err)
+})
+
 // ── Start Server ─────────────────────────────────────────────────
 const PORT = Number(process.env.PORT) || 4000
 

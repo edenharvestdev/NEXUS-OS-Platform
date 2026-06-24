@@ -27,9 +27,19 @@ if (process.env.DATABASE_URL) {
 }
 
 // ── Param converter: $1,$2 → ? for SQLite ───────────────────────
-function toSQLite(sql: string): string {
-  let i = 0
-  return sql.replace(/\$\d+/g, () => { i++; return '?' })
+// Postgres lets a single param be referenced by multiple placeholders
+// (e.g. `$1` used twice, or out-of-order `$2 ... $1`). SQLite `?` is
+// positional, so we rebuild the params array to match each placeholder
+// occurrence — repeating/reordering values as needed. A naive `$N → ?`
+// swap without this remap throws "Too few parameter values" whenever a
+// placeholder is reused, which crashes the request.
+function toSQLite(sql: string, params: any[]): { sql: string; params: any[] } {
+  const remapped: any[] = []
+  const converted = sql.replace(/\$(\d+)/g, (_match, n: string) => {
+    remapped.push(params[Number(n) - 1])
+    return '?'
+  })
+  return { sql: converted, params: remapped }
 }
 
 // ── Universal Query Interface ────────────────────────────────────
@@ -41,7 +51,8 @@ export async function queryAll(sql: string, params: any[] = []): Promise<any[]> 
   // SQLite fallback — convert $1,$2 → ?
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { db } = require('./db-sqlite') as { db: any }
-  return db.prepare(toSQLite(sql)).all(...params) as any[]
+  const q = toSQLite(sql, params)
+  return db.prepare(q.sql).all(...q.params) as any[]
 }
 
 export async function queryOne(sql: string, params: any[] = []): Promise<any | null> {
@@ -56,7 +67,8 @@ export async function run(sql: string, params: any[] = []): Promise<void> {
   }
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { db } = require('./db-sqlite') as { db: any }
-  db.prepare(toSQLite(sql)).run(...params)
+  const q = toSQLite(sql, params)
+  db.prepare(q.sql).run(...q.params)
 }
 
 export function newId(): string {

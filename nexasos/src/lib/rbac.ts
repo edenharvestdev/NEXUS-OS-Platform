@@ -73,9 +73,7 @@ export function getDefaultRoute(role?: string): string {
   return '/dashboard/home'
 }
 
-/** Send new/incomplete orgs to setup wizard first */
-export function getPostLoginRoute(role?: string, onboarding?: { completed?: number | boolean; task_board?: { progress_pct?: number } }): string {
-  const incomplete = onboarding && !onboarding.completed && (onboarding.task_board?.progress_pct ?? 0) < 100
-  if (incomplete && canAccessModule(role, 'onboarding')) return '/dashboard/onboarding'
-  return getDefaultRoute(role)
+/** Always land on home — org setup is optional from sidebar */
+export function getPostLoginRoute(_role?: string, _onboarding?: { completed?: number | boolean; task_board?: { progress_pct?: number } }): string {
+  return getDefaultRoute()
 }

@@ -299,6 +299,8 @@ export const api = {
     request('/api/onboarding/apply-template', { method: 'POST', body: JSON.stringify({ industry }) }),
   advanceOnboardingStep: (step: number) =>
     request('/api/onboarding/step', { method: 'POST', body: JSON.stringify({ step }) }),
+  completeOnboarding: () =>
+    request<any>('/api/onboarding/complete', { method: 'POST' }),
   updateOnboardingTask: (taskId: string, status: string) =>
     request<any>(`/api/onboarding/tasks/${taskId}`, { method: 'PATCH', body: JSON.stringify({ status }) }),
   getWorkbookTemplate: () => request<any>('/api/onboarding/workbook'),
