@@ -109,7 +109,7 @@ export default function DashboardSidebar({ user, collapsed, isMobile, drawerOpen
       >
         <Icon size={18} style={{ color: active ? C.gold : C.text3, flexShrink: 0 }} />
         {showLabels && (
-          <span style={{ fontSize: 13, fontWeight: active ? 600 : 500, color: active ? C.gold : C.text2 }}>
+          <span style={{ fontSize: 14, fontWeight: active ? 600 : 500, color: active ? C.gold : C.text2 }}>
             {t(key)}
           </span>
         )}
@@ -167,7 +167,7 @@ export default function DashboardSidebar({ user, collapsed, isMobile, drawerOpen
           }}
         >
           <Icon size={18} style={{ color: groupActive ? C.gold : C.text3, flexShrink: 0 }} />
-          <span style={{ flex: 1, fontSize: 13, fontWeight: groupActive ? 600 : 500, color: groupActive ? C.gold : C.text2 }}>
+          <span style={{ flex: 1, fontSize: 14, fontWeight: groupActive ? 600 : 500, color: groupActive ? C.gold : C.text2 }}>
             {t(key)}
           </span>
           <ChevronDown
@@ -201,7 +201,7 @@ export default function DashboardSidebar({ user, collapsed, isMobile, drawerOpen
               }}
             >
               <span style={{
-                fontSize: 12,
+                fontSize: 13,
                 fontWeight: active ? 600 : 500,
                 color: active ? C.gold : C.text2,
               }}>
@@ -349,7 +349,7 @@ export default function DashboardSidebar({ user, collapsed, isMobile, drawerOpen
                   textAlign: 'left',
                 }}
               >
-                <span style={{ fontSize: 9, fontWeight: 700, color: hasActive ? C.gold : C.text3, letterSpacing: 2 }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: hasActive ? C.gold : C.text3, letterSpacing: 0.5 }}>
                   {t(section.titleKey)}
                 </span>
                 <ChevronDown
