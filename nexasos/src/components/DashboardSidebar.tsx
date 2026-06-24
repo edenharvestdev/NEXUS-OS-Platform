@@ -15,6 +15,7 @@ import {
   isGroupActive,
   type NavLink,
   type NavGroup,
+  type NavSection,
 } from '@/lib/nav-config'
 
 type Props = {
@@ -66,6 +67,19 @@ export default function DashboardSidebar({ user, collapsed, isMobile, drawerOpen
   const toggleGroup = (id: string) => {
     setExpanded(prev => ({ ...prev, [id]: !prev[id] }))
   }
+
+  // Collapsible sections: default view shows only "My Work" + the section
+  // containing the current route; everything else stays folded so the
+  // sidebar isn't a wall of 40+ items. Computed inline (no effect) to stay
+  // render-loop-free.
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({})
+  const toggleSection = (key: string) => {
+    setOpenSections(prev => ({ ...prev, [key]: !prev[key] }))
+  }
+  const sectionHasActive = (section: NavSection) =>
+    section.entries.some(e =>
+      e.kind === 'link' ? isLinkActive(e, pathname, role) : isGroupActive(e, pathname),
+    )
 
   const renderLink = (entry: NavLink) => {
     const path = resolveNavPath(entry, role)
@@ -300,18 +314,60 @@ export default function DashboardSidebar({ user, collapsed, isMobile, drawerOpen
       )}
 
       <nav style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '6px 0', WebkitOverflowScrolling: 'touch' }}>
-        {sections.map(section => (
-          <div key={section.titleKey} style={{ marginBottom: 6 }}>
-            {showLabels && (
-              <div style={{ padding: '8px 20px 4px', fontSize: 9, fontWeight: 700, color: C.text3, letterSpacing: 2 }}>
-                {t(section.titleKey)}
+        {sections.map(section => {
+          // Icon-rail mode (collapsed desktop): no section headers, show every icon.
+          if (!showLabels) {
+            return (
+              <div key={section.titleKey} style={{ marginBottom: 6 }}>
+                {section.entries.map(entry => (
+                  entry.kind === 'link' ? renderLink(entry) : renderGroup(entry)
+                ))}
               </div>
-            )}
-            {section.entries.map(entry => (
-              entry.kind === 'link' ? renderLink(entry) : renderGroup(entry)
-            ))}
-          </div>
-        ))}
+            )
+          }
+
+          const isWork = section.titleKey === 'nav.section.work'
+          const hasActive = sectionHasActive(section)
+          // Default open: My Work + whichever section holds the current page.
+          const open = openSections[section.titleKey] ?? (isWork || hasActive)
+
+          return (
+            <div key={section.titleKey} style={{ marginBottom: 2 }}>
+              <button
+                type="button"
+                onClick={() => toggleSection(section.titleKey)}
+                style={{
+                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 8,
+                  padding: '9px 20px 6px',
+                  border: 'none',
+                  background: 'transparent',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                }}
+              >
+                <span style={{ fontSize: 9, fontWeight: 700, color: hasActive ? C.gold : C.text3, letterSpacing: 2 }}>
+                  {t(section.titleKey)}
+                </span>
+                <ChevronDown
+                  size={14}
+                  style={{
+                    color: C.text3,
+                    transform: open ? 'rotate(180deg)' : 'none',
+                    transition: 'transform 0.2s',
+                    flexShrink: 0,
+                  }}
+                />
+              </button>
+              {open && section.entries.map(entry => (
+                entry.kind === 'link' ? renderLink(entry) : renderGroup(entry)
+              ))}
+            </div>
+          )
+        })}
       </nav>
 
       <div style={{

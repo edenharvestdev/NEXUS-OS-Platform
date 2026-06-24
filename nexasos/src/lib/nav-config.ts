@@ -151,7 +151,6 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     titleKey: 'nav.section.ai',
     entries: [
-      link('myai', 'nav.myai', MessageSquare, 'myai', ['admin', 'hr', 'finance', 'sales', 'marketing', 'it', 'staff'], '/dashboard/my-ai'),
       link('deptai', 'nav.deptai', Users, 'deptai', ['admin', 'hr', 'finance', 'sales', 'marketing', 'it', 'staff'], '/dashboard/dept-ai'),
       link('meeting', 'nav.meeting', Mic2, 'meeting', ['admin', 'finance', 'hr', 'it', 'sales'], '/dashboard/meeting'),
       link('guardian', 'nav.guardian', ShieldCheck, 'guardian', ['admin', 'finance', 'it'], '/dashboard/guardian'),
