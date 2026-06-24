@@ -26,6 +26,7 @@ export async function getSettings(req: Request, res: Response): Promise<void> {
     company: {
       id: company?.id,
       name: company?.name || '',
+      slug: company?.slug || '',
       industry: company?.industry || '',
       size: company?.size || '',
       tax_id: company?.tax_id || '',
@@ -37,12 +38,14 @@ export async function getSettings(req: Request, res: Response): Promise<void> {
 }
 
 export async function updateCompany(req: Request, res: Response): Promise<void> {
-  const { name, industry, size, tax_id, address } = req.body
+  const { name, industry, size, tax_id, address, slug, subdomain } = req.body
+  const nextSlug = (subdomain || slug || '').toString().trim().toLowerCase().replace(/[^a-z0-9-]/g, '') || undefined
   await run(
     `UPDATE companies SET name = COALESCE($1, name), industry = COALESCE($2, industry),
-     size = COALESCE($3, size), tax_id = COALESCE($4, tax_id), address = COALESCE($5, address)
-     WHERE id = $6`,
-    [name, industry, size, tax_id, address, req.user.company_id],
+     size = COALESCE($3, size), tax_id = COALESCE($4, tax_id), address = COALESCE($5, address),
+     slug = COALESCE($6, slug)
+     WHERE id = $7`,
+    [name, industry, size, tax_id, address, nextSlug, req.user.company_id],
   )
   const company = await queryOne('SELECT * FROM companies WHERE id = $1', [req.user.company_id])
   res.json({ data: company })

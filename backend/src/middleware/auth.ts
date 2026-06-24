@@ -8,12 +8,18 @@ function getJwtSecret(): string {
   return secret || 'nexasos_dev_secret_change_in_production'
 }
 
+export type JwtPayload = {
+  id: string
+  company_id: string
+  impersonated_by?: string
+}
+
 export async function authMiddleware(req: Request, res: Response, next: NextFunction): Promise<void> {
   const token = req.headers.authorization?.replace('Bearer ', '')
   if (!token) { res.status(401).json({ error: 'Unauthorized — no token' }); return }
 
   try {
-    const payload = jwt.verify(token, getJwtSecret()) as any
+    const payload = jwt.verify(token, getJwtSecret()) as JwtPayload
     const user = await queryOne(
       `SELECT u.*, c.name as company_name FROM users u
        LEFT JOIN companies c ON c.id = u.company_id WHERE u.id = $1`,
@@ -21,6 +27,13 @@ export async function authMiddleware(req: Request, res: Response, next: NextFunc
     )
     if (!user) { res.status(401).json({ error: 'User not found' }); return }
     req.user = { ...user, companies: { id: user.company_id, name: user.company_name } }
+    req.jwtPayload = payload
+    if (payload.impersonated_by) {
+      const actor = await queryOne('SELECT id, name, email, role FROM users WHERE id = $1', [payload.impersonated_by])
+      req.impersonation = { active: true, actor }
+    } else if (user.role?.toLowerCase() === 'admin') {
+      req.impersonation = { active: false, canImpersonate: true }
+    }
     next()
   } catch {
     res.status(401).json({ error: 'Invalid or expired token' })
@@ -29,6 +42,10 @@ export async function authMiddleware(req: Request, res: Response, next: NextFunc
 
 declare global {
   namespace Express {
-    interface Request { user?: any }
+    interface Request {
+      user?: any
+      jwtPayload?: JwtPayload
+      impersonation?: { active: boolean; canImpersonate?: boolean; actor?: any }
+    }
   }
 }

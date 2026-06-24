@@ -1,6 +1,6 @@
 import { run, queryOne, newId } from './db'
 import { TAMADA_DICTIONARY_SEED } from './tamada-data-taxonomy'
-import { TAMADA_BRANCHES, TAMADA_SOPS, TAMADA_DEPARTMENTS } from './tamada-entities'
+import { TAMADA_BRANCHES, TAMADA_SOPS, TAMADA_DEPARTMENTS, TAMADA_ENTITIES } from './tamada-entities'
 import { writeAudit } from './audit'
 
 export async function seedTamadaDictionary(companyId: string, userId: string): Promise<number> {
@@ -26,6 +26,27 @@ export async function seedTamadaDictionary(companyId: string, userId: string): P
   }
   if (inserted > 0) {
     await writeAudit({ companyId, userId, action: 'seed_tamada_dictionary', resource: 'data_dictionary', meta: { inserted } })
+  }
+  return inserted
+}
+
+export async function seedTamadaEntities(companyId: string, userId: string): Promise<number> {
+  let inserted = 0
+  for (const e of TAMADA_ENTITIES) {
+    const dup = await queryOne(
+      'SELECT id FROM entities WHERE company_id = $1 AND entity_key = $2',
+      [companyId, e.id],
+    )
+    if (dup) continue
+    await run(
+      `INSERT INTO entities (id, company_id, entity_key, name, name_th, org_code)
+       VALUES ($1,$2,$3,$4,$5,$6)`,
+      [newId(), companyId, e.id, e.name, e.name_th, e.org_code],
+    )
+    inserted++
+  }
+  if (inserted > 0) {
+    await writeAudit({ companyId, userId, action: 'seed_tamada_entities', resource: 'entities', meta: { inserted } })
   }
   return inserted
 }
@@ -83,11 +104,12 @@ export async function seedTamadaDepartments(companyId: string): Promise<number> 
 
 export async function applyTamadaFullSeed(companyId: string, userId: string) {
   const departments = await seedTamadaDepartments(companyId)
+  const entities = await seedTamadaEntities(companyId, userId)
   const dictionary = await seedTamadaDictionary(companyId, userId)
   const branches = await seedTamadaBranches(companyId, userId)
   const knowledge = await seedTamadaKnowledge(companyId, userId)
   await run('UPDATE companies SET industry = $1 WHERE id = $2', ['Tamada Clinic & SDX Dental', companyId])
-  return { departments, dictionary, branches, knowledge, total_metrics: TAMADA_DICTIONARY_SEED.length }
+  return { departments, entities, dictionary, branches, knowledge, total_metrics: TAMADA_DICTIONARY_SEED.length }
 }
 
 export async function getDictionaryTargetCount(companyId: string): Promise<number> {

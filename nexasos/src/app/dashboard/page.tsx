@@ -35,9 +35,9 @@ const AI_ACTIVITY: any[] = []
 
 const ACT_TEXTS: Record<string, Record<string, string>> = {
   th: {
-    'act.1': 'Meeting Brain สรุปประชุม Marketing เสร็จ',
-    'act.2': 'Doc Guardian วิเคราะห์ Contract ABC Corp',
-    'act.3': 'Company GPT ตอบ 23 คำถาม HR วันนี้',
+    'act.1': 'สรุปการประชุม Marketing เสร็จแล้ว',
+    'act.2': 'ตรวจสัญญา ABC Corp เสร็จแล้ว',
+    'act.3': 'ที่ปรึกษาผู้บริหาร ตอบคำถาม HR 23 ข้อวันนี้',
     'act.4': 'AI ปฏิเสธ Request ผิดนโยบาย 2 รายการ',
   },
   en: {
@@ -183,7 +183,7 @@ export default function DashboardPage() {
         </div>
 
         {/* KPI Cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+        <div className="grid-cols-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
           {kpis.map(({ Icon, labelKey, value, subKey, trend, colorKey, chart }, i) => {
             const col = getColor(colorKey)
             return (
@@ -213,7 +213,7 @@ export default function DashboardPage() {
         {/* Modules Grid */}
         <div>
           <div style={{ fontSize: 16, fontWeight: 800, color: colors.text, marginBottom: 16, letterSpacing: -0.2 }}>{t('dash.modules')}</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+          <div className="grid-cols-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
             {MODULE_DEFS.map(({ id, Icon, labelKey, stat, sub, path, colorKey }) => {
               const col = getColor(colorKey)
               return (

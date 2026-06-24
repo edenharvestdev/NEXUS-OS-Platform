@@ -5,6 +5,10 @@ import { NEXUS_EXTENDED_PG, WORKLOG_SLA_PG } from './nexus-extended-schema'
 import { NEXUS_FULL_PG } from './nexus-full-schema'
 import { NEXUS_AI_PG, CHAT_SCOPE_MIGRATIONS } from './nexus-ai-schema'
 import { NEXUS_OPS_PG } from './nexus-ops-schema'
+import { NEXUS_ENTITY_PG, ENTITY_SCOPING_MIGRATIONS } from './nexus-entity-schema'
+import { NEXUS_HR_PG } from './nexus-hr-schema'
+import { NEXUS_HR_PHASE5_PG, HR_PHASE5_MIGRATIONS } from './nexus-hr-phase5-schema'
+import { NEXUS_HR_PHASE6_PG, HR_PHASE6_MIGRATIONS } from './nexus-hr-phase6-schema'
 import dotenv from 'dotenv'
 dotenv.config()
 
@@ -151,6 +155,10 @@ export async function initSchema(): Promise<void> {
   await pool.query(NEXUS_FULL_PG)
   await pool.query(NEXUS_AI_PG)
   await pool.query(NEXUS_OPS_PG)
+  await pool.query(NEXUS_ENTITY_PG)
+  await pool.query(NEXUS_HR_PG)
+  await pool.query(NEXUS_HR_PHASE5_PG)
+  await pool.query(NEXUS_HR_PHASE6_PG)
   await pool.query(WORKLOG_SLA_PG)
 
   await pool.query(`
@@ -162,6 +170,15 @@ export async function initSchema(): Promise<void> {
     try { await pool.query(sql.replace('ADD COLUMN', 'ADD COLUMN IF NOT EXISTS')) } catch { /* exists */ }
   }
   for (const sql of CHAT_SCOPE_MIGRATIONS) {
+    try { await pool.query(sql.replace('ADD COLUMN', 'ADD COLUMN IF NOT EXISTS')) } catch { /* exists */ }
+  }
+  for (const sql of ENTITY_SCOPING_MIGRATIONS) {
+    try { await pool.query(sql.replace('ADD COLUMN', 'ADD COLUMN IF NOT EXISTS')) } catch { /* exists */ }
+  }
+  for (const sql of HR_PHASE5_MIGRATIONS) {
+    try { await pool.query(sql.replace('ADD COLUMN', 'ADD COLUMN IF NOT EXISTS')) } catch { /* exists */ }
+  }
+  for (const sql of HR_PHASE6_MIGRATIONS) {
     try { await pool.query(sql.replace('ADD COLUMN', 'ADD COLUMN IF NOT EXISTS')) } catch { /* exists */ }
   }
 

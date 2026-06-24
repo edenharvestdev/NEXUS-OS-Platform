@@ -60,6 +60,11 @@ export const MIGRATIONS: Migration[] = [
     name: 'kpi_branch_code',
     up: `ALTER TABLE kpi_entries ADD COLUMN branch_code TEXT`,
   },
+  {
+    version: 10,
+    name: 'entity_side_tables',
+    up: '', // applied via NEXUS_ENTITY_PG at boot
+  },
 ]
 
 export async function runMigrations(): Promise<{ applied: number; current: number }> {

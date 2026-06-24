@@ -7,25 +7,26 @@ import { api } from '@/lib/api'
 type Scope = 'personal' | 'department' | 'company'
 
 const INTRO: Record<Scope, string> = {
-  personal: 'สวัสดีครับ ผม AI ส่วนตัวของคุณ 🤖\n\n• จำงาน KPI Skill ไฟล์ของคุณ\n• ช่วยวางแผนรายวัน\n• เมื่องานเสร็จ ให้อัปเดต Work Log → ระบบแจ้งหัวหน้าอัตโนมัติ',
+  personal: 'สวัสดีครับ ผม AI ส่วนตัวของคุณ 🤖\n\n• รู้ข้อมูล HR จริง: ลา สลิป ลงเวลา โควตา\n• จำงาน KPI Skill Work Log\n• ช่วยวางแผนรายวัน',
   department: 'สวัสดีครับ ผม AI แผนก 🤖\n\n• ติดตามงานรออนุมัติในแผนก\n• แนะนำมอบหมายงานจาก Skill + KPI\n• สรุปสถานะทีม',
   company: 'สวัสดีครับ ผม CEO / Command AI 🤖\n\n• มองทั้งองค์กร\n• ตรวจ API/KPI รวม\n• วางแผนระบบ',
 }
 
 const MODEL_LABEL: Record<Scope, string> = {
-  personal: 'Gemini 2.0 Flash',
-  department: 'Typhoon v2',
-  company: 'Claude Sonnet 4',
+  personal: 'GPT-4o · multi-provider',
+  department: 'Typhoon 2.5 · fallback',
+  company: 'Claude · OpenAI fallback',
 }
 
-export default function AIChatPanel({ scope, title, subtitle }: { scope: Scope; title: string; subtitle?: string }) {
+export default function AIChatPanel({ scope, title, subtitle, initialPrompt }: { scope: Scope; title: string; subtitle?: string; initialPrompt?: string }) {
   const { colors: C } = useApp()
   const [messages, setMessages] = useState<any[]>([{ role: 'ai', content: INTRO[scope], sources: [] }])
-  const [input, setInput] = useState('')
+  const [input, setInput] = useState(initialPrompt || '')
   const [loading, setLoading] = useState(false)
   const [modelLabel, setModelLabel] = useState(MODEL_LABEL[scope])
   const [toast, setToast] = useState<{ msg: string; type: string } | null>(null)
   const endRef = useRef<HTMLDivElement>(null)
+  const autoSent = useRef(false)
 
   useEffect(() => {
     api.getChatHistory(scope).then(res => {
@@ -39,9 +40,8 @@ export default function AIChatPanel({ scope, title, subtitle }: { scope: Scope; 
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages])
 
-  const send = async () => {
-    if (!input.trim() || loading) return
-    const q = input.trim()
+  const sendMessage = async (q: string) => {
+    if (!q.trim() || loading) return
     setInput('')
     setMessages(m => [...m, { role: 'user', content: q }])
     setLoading(true)
@@ -56,6 +56,18 @@ export default function AIChatPanel({ scope, title, subtitle }: { scope: Scope; 
     setLoading(false)
   }
 
+  useEffect(() => {
+    if (initialPrompt && !autoSent.current) {
+      autoSent.current = true
+      sendMessage(initialPrompt)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialPrompt])
+
+  const send = async () => {
+    await sendMessage(input)
+  }
+
   const clear = async () => {
     try {
       await api.clearChatHistory(scope)
@@ -64,7 +76,7 @@ export default function AIChatPanel({ scope, title, subtitle }: { scope: Scope; 
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, height: 'calc(100vh - 160px)' }}>
+    <div className="chat-panel-height" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
           <div style={{ fontSize: 18, fontWeight: 800, color: C.text }}>{title}</div>

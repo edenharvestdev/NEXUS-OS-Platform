@@ -1,43 +1,36 @@
 import { Request, Response } from 'express'
 import { queryAll, queryOne, run, newId } from '../lib/db'
 
-// ── Fallback result when AI is unavailable (dev only) ─────────────
-const fallbackResult = () => {
-  if (process.env.NODE_ENV === 'production') {
-    throw new Error('Gemini API key not configured')
-  }
-  return {
-    score: 65,
-    level: 'medium' as string,
-    summary: 'เอกสารฉบับนี้มีเนื้อหาครบถ้วน ควรตรวจสอบเงื่อนไขก่อนลงนาม (demo mode)',
-    risks: [
-      {
-        level: 'medium',
-        title: 'เงื่อนไขการยกเลิก',
-        location: 'หน้า 2',
-        description: 'ควรตรวจสอบเงื่อนไขการยกเลิกสัญญาอย่างละเอียด',
-        suggestion: 'ปรึกษาทนายความก่อนลงนาม',
-      },
-    ],
-  }
-}
+const fallbackResult = () => ({
+  score: 65,
+  level: 'medium' as string,
+  summary: 'วิเคราะห์ด้วยโหมดสำรอง — ควรตรวจสอบเงื่อนไขก่อนลงนาม',
+  risks: [
+    {
+      level: 'medium',
+      title: 'ต้องตรวจสอบด้วยตนเอง',
+      location: '—',
+      description: 'AI ไม่สามารถวิเคราะห์ได้ครบ — ปรึกษาทนายความ',
+      suggestion: 'อัปโหลดไฟล์ชัดเจนขึ้นหรือลองใหม่',
+    },
+  ],
+})
 
-// ── Try Gemini JSON — text or vision ─────────────────────────────
-async function tryGeminiVisionJSON(
+// ── Try AI JSON — text or vision ─────────────────────────────────
+async function tryDocAIJSON(
   prompt: string,
   imageBase64?: string,
   mimeType?: string,
 ): Promise<any> {
+  const { askAIJSON, askAIVisionJSON, anyAIConfigured } = await import('../lib/ai-providers')
+  if (!anyAIConfigured()) return fallbackResult()
   try {
-    if (!process.env.GEMINI_API_KEY) throw new Error('no key')
     if (imageBase64 && mimeType) {
-      const { askGeminiVisionJSON } = await import('../lib/gemini')
-      return await askGeminiVisionJSON(prompt, imageBase64, mimeType)
+      return await askAIVisionJSON(prompt, imageBase64, mimeType, { prefer: ['openai', 'gemini'] })
     }
-    const { askGeminiJSON } = await import('../lib/gemini')
-    return await askGeminiJSON(prompt)
+    return await askAIJSON(prompt, { prefer: ['openai', 'gemini', 'claude'] })
   } catch (e) {
-    console.warn('Gemini doc analysis fallback:', (e as Error).message)
+    console.warn('Doc AI fallback:', (e as Error).message)
     return fallbackResult()
   }
 }
@@ -76,7 +69,7 @@ export async function analyze(req: Request, res: Response): Promise<void> {
 
 ${content ? `เนื้อหาเอกสาร:\n${content}` : ''}`
 
-  const result = await tryGeminiVisionJSON(prompt, fileBase64, fileMime)
+  const result = await tryDocAIJSON(prompt, fileBase64, fileMime)
 
   // Normalize risk levels
   const risks = (result.risks || []).map((r: any) => ({

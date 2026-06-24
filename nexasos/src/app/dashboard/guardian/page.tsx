@@ -96,7 +96,7 @@ export default function GuardianPage() {
   return (
     <div style={{display:'flex',flexDirection:'column',gap:16,animation:'fadeIn 0.3s ease'}}>
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:10}}>
-        <div><div style={{fontSize:18,fontWeight:800,color:C.text}}>Doc Guardian AI</div><div style={{fontSize:12,color:C.text3,marginTop:2}}>วิเคราะห์สัญญาและเอกสารกฎหมายด้วย Gemini 2.0 Flash</div></div>
+        <div><div style={{fontSize:18,fontWeight:800,color:C.text}}>ตรวจสัญญา</div><div style={{fontSize:12,color:C.text3,marginTop:2}}>วิเคราะห์สัญญาและเอกสารกฎหมาย</div></div>
         <button onClick={()=>setShowUpload(true)} style={{display:'flex',alignItems:'center',gap:6,padding:'8px 16px',borderRadius:10,background:`linear-gradient(135deg,${C.gold},${C.gold2})`,border:'none',color:'#fff',cursor:'pointer',fontSize:12,fontWeight:700}}><Ic n="upload" s={13}/>อัพโหลดเอกสาร</button>
       </div>
 

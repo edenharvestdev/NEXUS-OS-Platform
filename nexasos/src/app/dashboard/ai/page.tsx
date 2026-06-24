@@ -5,12 +5,12 @@ import { useApp } from '@/lib/theme'
 import { api } from '@/lib/api'
 
 const AGENT_DEFS = [
-  { id: 1, name: 'Meeting Brain', module: 'meeting', match: 'Meeting' },
-  { id: 2, name: 'Finance OCR', module: 'finance', match: 'Finance' },
-  { id: 3, name: 'Company GPT', module: 'gpt', match: 'Company GPT' },
-  { id: 4, name: 'Doc Guardian', module: 'guardian', match: 'Doc Guardian' },
-  { id: 5, name: 'Sales Copilot', module: 'sales', match: 'Sales' },
-  { id: 6, name: 'HR Assistant', module: 'people', match: 'HR' },
+  { id: 1, name: 'สรุปการประชุม', module: 'meeting', match: 'Meeting' },
+  { id: 2, name: 'สแกนใบเสร็จ', module: 'finance', match: 'Finance' },
+  { id: 3, name: 'ที่ปรึกษาผู้บริหาร', module: 'gpt', match: 'Company GPT' },
+  { id: 4, name: 'ตรวจสัญญา', module: 'guardian', match: 'Doc Guardian' },
+  { id: 5, name: 'ผู้ช่วยขาย', module: 'sales', match: 'Sales' },
+  { id: 6, name: 'ผู้ช่วย HR', module: 'people', match: 'HR' },
 ]
 
 export default function AIControlPage() {
@@ -21,6 +21,8 @@ export default function AIControlPage() {
   const [log, setLog] = useState<any[]>([])
   const [budget, setBudget] = useState(5000)
   const [routerStatus, setRouterStatus] = useState<any>(null)
+  const [providerProbe, setProviderProbe] = useState<any>(null)
+  const [probing, setProbing] = useState(false)
   const [routerPrompt, setRouterPrompt] = useState('')
   const [routerTask, setRouterTask] = useState('general')
   const [routerResult, setRouterResult] = useState<any>(null)
@@ -64,6 +66,27 @@ export default function AIControlPage() {
     return () => clearInterval(iv)
   }, [liveLog, loadStats])
 
+  const runProbe = async () => {
+    setProbing(true)
+    try {
+      const res = await api.probeAIProviders()
+      setProviderProbe(res)
+      showToast(`ทดสอบแล้ว — ใช้งานได้ ${res.summary?.working}/${res.summary?.configured} provider`)
+    } catch (e: any) { showToast(e.message, 'error') }
+    finally { setProbing(false) }
+  }
+
+  const providerLabels: Record<string, string> = {
+    openai: 'OpenAI',
+    claude: 'Claude',
+    gemini: 'Gemini',
+    typhoon: 'Typhoon',
+    line: 'LINE',
+  }
+
+  const providers = routerStatus?.providers
+  const probeResults = providerProbe?.results || {}
+
   const runRouter = async () => {
     if (!routerPrompt.trim()) { showToast('ใส่ prompt', 'error'); return }
     setRouting(true)
@@ -88,7 +111,7 @@ export default function AIControlPage() {
   return (
     <div style={{display:'flex',flexDirection:'column',gap:16,animation:'fadeIn 0.3s ease'}}>
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:10}}>
-        <div><div style={{fontSize:18,fontWeight:800,color:C.text}}>AI Command Tower · CEO</div><div style={{fontSize:12,color:C.text3,marginTop:2}}>มองทั้งระบบ · API/KPI/Skill · วางแผน AI ทั้งองค์กร</div></div>
+        <div><div style={{fontSize:18,fontWeight:800,color:C.text}}>ศูนย์ควบคุม AI</div><div style={{fontSize:12,color:C.text3,marginTop:2}}>ดูภาพรวม AI ทั้งองค์กร · งบประมาณ · ประสิทธิภาพ</div></div>
         <div style={{display:'flex',gap:8,alignItems:'center'}}>
           <Toggle val={liveLog} onChange={setLiveLog}/>
           <span style={{fontSize:12,color:liveLog?C.green:C.text3,fontWeight:600}}>Live Feed</span>
@@ -147,7 +170,78 @@ export default function AIControlPage() {
         </div>
       </div>
 
-      <Tabs tabs={[{id:'overview',icon:'grid',label:'ภาพรวม'},{id:'router',icon:'cpu',label:'Model Router'},{id:'agents',icon:'cpu',label:'AI Agents'},{id:'permissions',icon:'lock',label:'สิทธิ์'},{id:'log',icon:'zap',label:'Live Log'}]} active={activeTab} onChange={setActiveTab}/>
+      <Tabs tabs={[{id:'overview',icon:'grid',label:'ภาพรวม'},{id:'status',icon:'activity',label:'สถานะ AI'},{id:'router',icon:'cpu',label:'Model Router'},{id:'agents',icon:'cpu',label:'AI Agents'},{id:'permissions',icon:'lock',label:'สิทธิ์'},{id:'log',icon:'zap',label:'Live Log'}]} active={activeTab} onChange={setActiveTab}/>
+
+      {activeTab==='status'&&(
+        <div style={{display:'flex',flexDirection:'column',gap:16}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:10}}>
+            <div style={{fontSize:13,fontWeight:700,color:C.text}}>สถานะ Provider & Fallback</div>
+            <button onClick={runProbe} disabled={probing} style={{padding:'10px 18px',borderRadius:10,border:'none',cursor:'pointer',background:`linear-gradient(135deg,${C.gold},${C.gold2})`,color:'#fff',fontWeight:700,fontSize:12,opacity:probing?0.7:1}}>
+              {probing ? 'กำลังทดสอบ...' : 'ทดสอบทุก Provider'}
+            </button>
+          </div>
+
+          {providerProbe?.summary && (
+            <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
+              <Badge type="green">ใช้งานได้ {providerProbe.summary.working}/{providerProbe.summary.configured}</Badge>
+              <span style={{fontSize:11,color:C.text3}}>ทดสอบเมื่อ {new Date(providerProbe.probed_at).toLocaleString('th-TH')}</span>
+            </div>
+          )}
+
+          <div className="grid-cols-2" style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))',gap:12}}>
+            {(['openai','claude','gemini','typhoon'] as const).map(key => {
+              const p = providers?.[key]
+              const probe = probeResults[key]
+              const configured = p?.configured
+              const liveOk = probe?.ok
+              const badge = !configured ? 'red' : liveOk === true ? 'green' : liveOk === false ? 'red' : 'gold'
+              const statusText = !configured ? 'ไม่มี Key' : liveOk === true ? `พร้อม · ${probe.latency_ms}ms` : liveOk === false ? 'ล้มเหลว' : 'ยังไม่ทดสอบ'
+              return (
+                <div key={key} style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,padding:16}}>
+                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:8}}>
+                    <div style={{fontSize:15,fontWeight:800,color:C.text}}>{providerLabels[key]}</div>
+                    <Badge type={badge}>{statusText}</Badge>
+                  </div>
+                  <div style={{fontSize:11,color:C.text3,marginTop:8,fontFamily:'JetBrains Mono,monospace'}}>
+                    {p?.model || p?.models?.[0] || '—'}
+                  </div>
+                  {probe?.error && (
+                    <div style={{fontSize:10,color:C.red,marginTop:8,lineHeight:1.4}}>{probe.error.slice(0,120)}</div>
+                  )}
+                </div>
+              )
+            })}
+            <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,padding:16}}>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}}>
+                <div style={{fontSize:15,fontWeight:800,color:C.text}}>LINE</div>
+                <Badge type={providers?.line?.configured ? 'green' : 'red'}>{providers?.line?.configured ? 'ตั้งแล้ว' : 'ยังไม่ตั้ง'}</Badge>
+              </div>
+              <div style={{fontSize:11,color:C.text3,marginTop:8}}>แจ้งเตือนพนักงาน (optional)</div>
+            </div>
+          </div>
+
+          <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,padding:16}}>
+            <div style={{fontSize:13,fontWeight:700,color:C.text,marginBottom:10}}>Fallback Chain</div>
+            <div style={{fontSize:12,color:C.text2,lineHeight:1.7}}>
+              <div><strong style={{color:C.gold}}>ข้อความ:</strong> {(providers?.default_chain || []).join(' → ') || '—'}</div>
+              <div style={{marginTop:6}}><strong style={{color:C.gold}}>Vision (OCR/สัญญา):</strong> {(providers?.vision_chain || []).join(' → ') || '—'}</div>
+            </div>
+          </div>
+
+          <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,padding:16,overflowX:'auto'}}>
+            <div style={{fontSize:13,fontWeight:700,color:C.text,marginBottom:12}}>Route ตามงาน</div>
+            <div style={{display:'grid',gap:8,minWidth:520}}>
+              {(routerStatus?.routes||[]).map((r:any)=>(
+                <div key={r.task_type} style={{display:'grid',gridTemplateColumns:'120px 1fr 100px',gap:10,padding:'10px 0',borderBottom:`1px solid ${C.border}`,alignItems:'center'}}>
+                  <span style={{fontSize:12,fontWeight:700,color:C.text}}>{r.task_type}</span>
+                  <span style={{fontSize:11,color:C.text2}}>{r.provider} / {r.model} · fallback: {(r.fallback_chain||[]).join(' → ')}</span>
+                  <Badge type={r.configured?'green':'red'}>{r.configured?'พร้อม':'ไม่มี Key'}</Badge>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {activeTab==='overview'&&(
         <div style={{display:'flex',gap:16,flexWrap:'wrap'}}>
@@ -186,7 +280,7 @@ export default function AIControlPage() {
       {activeTab==='router'&&(
         <div style={{display:'flex',flexDirection:'column',gap:16}}>
           <div style={{background:C.goldLight,border:`1px solid ${C.gold}33`,borderRadius:12,padding:14,fontSize:12,color:C.text2}}>
-            <strong style={{color:C.gold}}>AI Connector Layer</strong> — Claude (strategy) · GPT (automation) · Gemini (research) · Typhoon (Thai) · Copilot ไม่ใช่ Autopilot
+            <strong style={{color:C.gold}}>AI Connector Layer</strong> — OpenAI (หลัก) · Claude (กลยุทธ์) · Gemini · Typhoon (ไทย) · fallback อัตโนมัติ
           </div>
           <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))',gap:10}}>
             {(routerStatus?.routes||[]).map((r:any)=>(
@@ -197,6 +291,9 @@ export default function AIControlPage() {
                   <Badge type={r.configured?'green':'red'}>{r.configured?'Ready':'No Key'}</Badge>
                   <Badge type="blue">{r.decision_rights}</Badge>
                 </div>
+                {r.fallback_chain?.length > 0 && (
+                  <div style={{fontSize:10,color:C.text3,marginTop:6}}>fallback: {r.fallback_chain.join(' → ')}</div>
+                )}
               </div>
             ))}
           </div>

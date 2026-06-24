@@ -172,7 +172,7 @@ export default function SettingsPage() {
           </div>
           <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,overflow:'hidden'}}>
             {dictionary.length===0 ? (
-              <div style={{padding:32,textAlign:'center',color:C.text3,fontSize:13}}>ยังไม่มี metric — ใช้ Setup Wizard เลือก Tamada template</div>
+              <div style={{padding:32,textAlign:'center',color:C.text3,fontSize:13}}>ยังไม่มี metric — ใช้ตั้งค่าองค์กร เลือก Tamada template</div>
             ) : dictionary.map(m=>(
               <div key={m.id||m.metric_key} style={{padding:'14px 18px',borderBottom:`1px solid ${C.border}`}}>
                 <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:12,flexWrap:'wrap'}}>

@@ -13,7 +13,7 @@ export const AI_AGENTS = {
     memory: 'user',
     dataAccess: ['own_tasks', 'own_kpi', 'own_skills', 'own_files', 'own_work_logs', 'own_memory'],
     taskType: 'general',
-    modelHint: 'Gemini 2.0 Flash',
+    modelHint: 'GPT-4o → multi-provider fallback',
   },
   department: {
     id: 'department',
@@ -25,7 +25,7 @@ export const AI_AGENTS = {
     memory: 'department',
     dataAccess: ['dept_users', 'dept_work_logs', 'dept_kpi', 'dept_skills', 'dept_sop'],
     taskType: 'thai_market',
-    modelHint: 'Typhoon v2 → Gemini fallback',
+    modelHint: 'Typhoon 2.5 → OpenAI fallback',
   },
   company: {
     id: 'company',
@@ -37,7 +37,7 @@ export const AI_AGENTS = {
     memory: 'org',
     dataAccess: ['all_users', 'all_kpi', 'all_skills', 'api_usage', 'audit', 'departments'],
     taskType: 'strategy',
-    modelHint: 'Claude Sonnet 4 → Gemini fallback',
+    modelHint: 'Claude → OpenAI fallback',
   },
 } as const
 

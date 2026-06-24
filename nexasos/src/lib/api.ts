@@ -1,6 +1,12 @@
 // ─── NEXUS OS API Client ────────────────────────────────────────
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'
 
+export type ImpersonationState = {
+  active: boolean
+  canImpersonate?: boolean
+  actor?: { id: string; name: string; email: string; role?: string }
+}
+
 if (process.env.NODE_ENV === 'production' && BASE_URL.includes('localhost')) {
   console.warn('⚠️ NEXT_PUBLIC_API_URL is not set. API calls will default to localhost and likely fail in production.')
 }
@@ -44,7 +50,23 @@ export const api = {
       body: JSON.stringify({ email, password, name, companyName }),
     }),
 
-  getMe: () => request<{ user: any }>('/api/auth/me'),
+  getMe: () => request<{ user: any; impersonation?: ImpersonationState }>('/api/auth/me'),
+
+  getImpersonateTargets: () =>
+    request<{ data: Array<{ id: string; name: string; email: string; role: string; department: string }> }>(
+      '/api/auth/impersonate/targets',
+    ),
+
+  impersonate: (userId: string) =>
+    request<{ token: string; user: any; impersonation: ImpersonationState }>('/api/auth/impersonate', {
+      method: 'POST',
+      body: JSON.stringify({ userId }),
+    }),
+
+  stopImpersonate: () =>
+    request<{ token: string; user: any; impersonation: ImpersonationState }>('/api/auth/impersonate/stop', {
+      method: 'POST',
+    }),
 
   // ── Departments ──────────────────────────────────────────────
   getDepartments: () =>
@@ -225,6 +247,8 @@ export const api = {
   simulateFeasibility: (data: any) =>
     request('/api/health/simulate', { method: 'POST', body: JSON.stringify(data) }),
   getAIRouterStatus: () => request<any>('/api/ai-router/status'),
+  probeAIProviders: () =>
+    request<any>('/api/ai-router/probe', { method: 'POST', body: JSON.stringify({}) }),
   routeAI: (prompt: string, task_type?: string, grounded?: boolean) =>
     request<any>('/api/ai-router/route', {
       method: 'POST',
@@ -298,4 +322,102 @@ export const api = {
   getTamadaBranches: () => request<any>('/api/tamada/branches'),
   getTamadaIngestMapping: () => request<any>('/api/tamada/ingest-mapping'),
   seedTamada: () => request<any>('/api/tamada/seed', { method: 'POST' }),
+
+  // ── HR Engine (Phases 0-4) ─────────────────────────────────────
+  getOrgUnits: () => request<{ data: any[] }>('/api/hr/org-units'),
+  createOrgUnit: (data: any) => request('/api/hr/org-units', { method: 'POST', body: JSON.stringify(data) }),
+  getPositions: () => request<{ data: any[] }>('/api/hr/positions'),
+  getPermissionGroups: () => request<{ data: any[] }>('/api/hr/permission-groups'),
+  createPermissionGroup: (data: any) => request('/api/hr/permission-groups', { method: 'POST', body: JSON.stringify(data) }),
+  updatePermissionGroup: (id: string, data: any) => request(`/api/hr/permission-groups/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  assignPermissionGroup: (id: string, userId: string) =>
+    request(`/api/hr/permission-groups/${id}/assign`, { method: 'POST', body: JSON.stringify({ user_id: userId }) }),
+  getRbacMatrix: () => request<any>('/api/hr/rbac-matrix'),
+  clockIn: (data?: { source?: string; shift_id?: string; lat?: number; lng?: number }) =>
+    request('/api/hr/attendance/clock-in', { method: 'POST', body: JSON.stringify(data || {}) }),
+  clockOut: () => request('/api/hr/attendance/clock-out', { method: 'POST' }),
+  getAttendance: (params?: { user_id?: string; from?: string; to?: string }) => {
+    const q = new URLSearchParams()
+    if (params?.user_id) q.set('user_id', params.user_id)
+    if (params?.from) q.set('from', params.from)
+    if (params?.to) q.set('to', params.to)
+    return request<{ data: any[] }>(`/api/hr/attendance?${q}`)
+  },
+  getHrAdvances: () => request<{ data: any[] }>('/api/hr/advances'),
+  createHrAdvance: (data: { amount: number; reason?: string; user_id?: string }) =>
+    request('/api/hr/advances', { method: 'POST', body: JSON.stringify(data) }),
+  reviewHrAdvance: (id: string, status: 'approved' | 'rejected') =>
+    request(`/api/hr/advances/${id}`, { method: 'PATCH', body: JSON.stringify({ status }) }),
+  getPayrollSettings: () => request<{ data: any }>('/api/hr/payroll/settings'),
+  updatePayrollSettings: (data: any) =>
+    request('/api/hr/payroll/settings', { method: 'PATCH', body: JSON.stringify(data) }),
+  getPayrollPeriods: () => request<{ data: any[] }>('/api/hr/payroll/periods'),
+  createPayrollPeriod: (year: number, month: number) =>
+    request('/api/hr/payroll/periods', { method: 'POST', body: JSON.stringify({ year, month }) }),
+  getPayrollPeriod: (id: string) => request<any>(`/api/hr/payroll/periods/${id}`),
+  buildPayrollCalendar: (id: string) =>
+    request(`/api/hr/payroll/periods/${id}/calendar`, { method: 'POST' }),
+  calculatePayrollPeriod: (id: string) =>
+    request(`/api/hr/payroll/periods/${id}/calculate`, { method: 'POST' }),
+  finishPayrollPeriod: (id: string) =>
+    request(`/api/hr/payroll/periods/${id}/finish`, { method: 'POST' }),
+  getEmployeeCalendar: (userId: string, periodId?: string) =>
+    request<{ data: any[] }>(`/api/hr/payroll/employee/${userId}/calendar${periodId ? `?period_id=${periodId}` : ''}`),
+  getPayslip: (userId: string, periodId: string) =>
+    request<{ data: any }>(`/api/hr/payroll/payslip/${userId}/${periodId}`),
+  getHrReport: (type: string, params?: { period_id?: string; year?: number; month?: number }) => {
+    const q = new URLSearchParams()
+    if (params?.period_id) q.set('period_id', params.period_id)
+    if (params?.year) q.set('year', String(params.year))
+    if (params?.month) q.set('month', String(params.month))
+    return request<any>(`/api/hr/reports/${type}?${q}`)
+  },
+  recordSalaryChange: (data: { user_id: string; new_salary: number; effective_date?: string; note?: string }) =>
+    request('/api/hr/salary-change', { method: 'POST', body: JSON.stringify(data) }),
+
+  getLeaveTypes: () => request<{ data: any[] }>('/api/hr/leave-types'),
+  getHrLeaveRequests: () => request<{ data: any[] }>('/api/hr/leave-requests'),
+  createHrLeaveRequest: (data: any) =>
+    request('/api/hr/leave-requests', { method: 'POST', body: JSON.stringify(data) }),
+  approveHrLeaveStep: (id: string, action: 'approve' | 'reject', note?: string) =>
+    request(`/api/hr/leave-requests/${id}/approve`, { method: 'POST', body: JSON.stringify({ action, note }) }),
+  getOtTypes: () => request<{ data: any[] }>('/api/hr/overtime/types'),
+  getOtRequests: () => request<{ data: any[] }>('/api/hr/overtime/requests'),
+  createOtRequest: (data: any) =>
+    request('/api/hr/overtime/requests', { method: 'POST', body: JSON.stringify(data) }),
+  reviewOtRequest: (id: string, status: 'approved' | 'rejected') =>
+    request(`/api/hr/overtime/requests/${id}`, { method: 'PATCH', body: JSON.stringify({ status }) }),
+  exportPayslipUrl: (userId: string, periodId: string) => {
+    const base = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'
+    return `${base}/api/hr/payroll/payslip/${userId}/${periodId}/export`
+  },
+  exportTaxFormUrl: (type: string, periodId: string) => {
+    const base = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'
+    return `${base}/api/hr/payroll/export/${type}?period_id=${periodId}`
+  },
+  getMyModules: () => request<{ data: string[] }>('/api/hr/me/modules'),
+  getLeaveApprovalConfig: () => request<{ data: any[] }>('/api/hr/leave-approval-config'),
+  updateLeaveApprovalConfig: (levels: any[]) =>
+    request('/api/hr/leave-approval-config', { method: 'PATCH', body: JSON.stringify({ levels }) }),
+  getLeaveQuotas: (year?: number) =>
+    request<{ data: any[] }>(`/api/hr/leave-quotas${year ? `?year=${year}` : ''}`),
+  updateLeaveQuota: (id: string, quota_days: number) =>
+    request('/api/hr/leave-quotas', { method: 'PATCH', body: JSON.stringify({ id, quota_days }) }),
+  getAttendanceLocations: () => request<{ data: any[] }>('/api/hr/attendance/locations'),
+  createAttendanceLocation: (data: any) =>
+    request('/api/hr/attendance/locations', { method: 'POST', body: JSON.stringify(data) }),
+  deleteAttendanceLocation: (id: string) =>
+    request(`/api/hr/attendance/locations/${id}`, { method: 'DELETE' }),
+  clockInQr: (data: { qr_token: string; lat?: number; lng?: number }) =>
+    request('/api/hr/attendance/clock-in-qr', { method: 'POST', body: JSON.stringify(data) }),
+  getShifts: () => request<{ data: any[] }>('/api/hr/shifts'),
+  createShift: (data: any) => request('/api/hr/shifts', { method: 'POST', body: JSON.stringify(data) }),
+  updateShift: (id: string, data: any) =>
+    request(`/api/hr/shifts/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  getGroupMembers: (groupId: string) =>
+    request<{ data: any[] }>(`/api/hr/permission-groups/${groupId}/members`),
+  unassignPermissionGroup: (groupId: string, userId: string) =>
+    request(`/api/hr/permission-groups/${groupId}/members`, { method: 'DELETE', body: JSON.stringify({ user_id: userId }) }),
+  approveOtStep: (id: string, action: 'approve' | 'reject', note?: string) =>
+    request(`/api/hr/overtime/requests/${id}`, { method: 'PATCH', body: JSON.stringify({ action, note }) }),
 }

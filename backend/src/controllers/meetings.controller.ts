@@ -13,23 +13,22 @@ const fallbackMeeting = (title: string) => ({
   duration_minutes: 60,
 })
 
-// ── Try Gemini with optional vision ─────────────────────────────
-async function tryGeminiJSON(
+// ── Try AI JSON — text or vision with multi-provider fallback ─────
+async function tryAIJSON(
   prompt: string,
   imageBase64?: string,
   mimeType?: string,
 ): Promise<any> {
   try {
-    if (!process.env.GEMINI_API_KEY) throw new Error('no key')
+    const { askAIJSON, askAIVisionJSON, anyAIConfigured } = await import('../lib/ai-providers')
+    if (!anyAIConfigured()) throw new Error('no AI keys')
     if (imageBase64 && mimeType) {
-      const { askGeminiVisionJSON } = await import('../lib/gemini')
-      return await askGeminiVisionJSON(prompt, imageBase64, mimeType)
+      return await askAIVisionJSON(prompt, imageBase64, mimeType, { prefer: ['openai', 'gemini'] })
     }
-    const { askGeminiJSON } = await import('../lib/gemini')
-    return await askGeminiJSON(prompt)
+    return await askAIJSON(prompt, { prefer: ['openai', 'gemini', 'claude'] })
   } catch (e) {
-    console.warn('Gemini meeting fallback:', (e as Error).message)
-    return null // signal to use fallback
+    console.warn('Meeting AI fallback:', (e as Error).message)
+    return null
   }
 }
 
@@ -82,7 +81,7 @@ sentiment ต้องเป็น: positive, neutral, หรือ negative
 
 ${transcript ? `เนื้อหาการประชุม:\n${transcript}` : ''}`
 
-  const result = (await tryGeminiJSON(prompt, fileBase64, fileMime)) || fallbackMeeting(title)
+  const result = (await tryAIJSON(prompt, fileBase64, fileMime)) || fallbackMeeting(title)
 
   const meeting_id = newId()
   await run(

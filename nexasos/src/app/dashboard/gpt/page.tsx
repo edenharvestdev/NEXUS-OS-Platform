@@ -79,9 +79,9 @@ export default function GPTPage() {
   const chips = ['นโยบายลาพักร้อน','วันลาคงเหลือของฉัน','ขั้นตอนเบิกค่าใช้จ่าย','สวัสดิการมีอะไรบ้าง','วันหยุดประจำปี']
 
   return (
-    <div style={{display:'flex',height:'calc(100vh - 120px)',gap:0,minHeight:0,animation:'fadeIn 0.3s ease'}}>
+    <div className="gpt-layout chat-panel-height" style={{ display: 'flex', gap: 0, minHeight: 0, animation: 'fadeIn 0.3s ease' }}>
       {/* Sidebar */}
-      <div style={{width:220,background:C.bg3,borderRadius:'16px 0 0 16px',border:`1px solid ${C.border}`,borderRight:'none',display:'flex',flexDirection:'column',padding:'14px 12px',flexShrink:0}}>
+      <div className="gpt-sidebar" style={{ width: 220, background: C.bg3, borderRadius: '16px 0 0 16px', border: `1px solid ${C.border}`, borderRight: 'none', display: 'flex', flexDirection: 'column', padding: '14px 12px', flexShrink: 0 }}>
         <button onClick={clearChat} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:8,width:'100%',padding:'12px',borderRadius:12,background:`linear-gradient(135deg,${C.gold},${C.gold2})`,border:'none',color:'#fff',cursor:'pointer',fontSize:13,fontWeight:700,marginBottom:16,boxShadow:`0 4px 10px ${C.gold}33`}}>
           <Ic n="plus" s={14}/>เริ่มการสนทนาใหม่
         </button>
@@ -111,10 +111,10 @@ export default function GPTPage() {
       </div>
 
       {/* Chat Area */}
-      <div style={{flex:1,display:'flex',flexDirection:'column',background:C.bg2,borderRadius:'0 16px 16px 0',border:`1px solid ${C.border}`,minHeight:0,overflow:'hidden'}}>
+      <div className="gpt-chat" style={{ flex: 1, display: 'flex', flexDirection: 'column', background: C.bg2, borderRadius: '0 16px 16px 0', border: `1px solid ${C.border}`, minHeight: 0, overflow: 'hidden' }}>
         <div style={{padding:'16px 20px',borderBottom:`1px solid ${C.border}`,display:'flex',alignItems:'center',gap:12,flexShrink:0}}>
           <div style={{width:38,height:38,borderRadius:12,background:`${C.gold}22`,display:'flex',alignItems:'center',justifyContent:'center'}}><Ic n="msg" s={18} c={C.gold}/></div>
-          <div><div style={{fontSize:14,fontWeight:800,color:C.text}}>Company GPT</div><div style={{fontSize:11,color:C.text3}}>เชื่อมต่อฐานข้อมูลบริษัทแบบ Real-time</div></div>
+          <div><div style={{fontSize:14,fontWeight:800,color:C.text}}>ที่ปรึกษาผู้บริหาร</div><div style={{fontSize:11,color:C.text3}}>ตอบจากข้อมูลจริงขององค์กร</div></div>
           <div style={{marginLeft:'auto',display:'flex',alignItems:'center',gap:8}}>
             <div style={{width:8,height:8,borderRadius:'50%',background:C.green,animation:'pulse 2s ease infinite'}}/>
             <span style={{fontSize:12,color:C.green,fontWeight:700}}>Ready</span>
@@ -127,7 +127,7 @@ export default function GPTPage() {
               {m.role!=='user'&&(
                 <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:2}}>
                   <div style={{width:24,height:24,borderRadius:8,background:`${C.gold}22`,display:'flex',alignItems:'center',justifyContent:'center'}}><Ic n="cpu" s={14} c={C.gold}/></div>
-                  <span style={{fontSize:11,color:C.text3,fontWeight:700}}>Company GPT</span>
+                  <span style={{fontSize:11,color:C.text3,fontWeight:700}}>ที่ปรึกษาผู้บริหาร</span>
                 </div>
               )}
               <div style={{background:m.role==='user'?`linear-gradient(135deg,${C.gold2},${C.gold})`:'rgba(255,255,255,0.06)',border:m.role!=='user'?`1px solid ${C.border}`:'none',borderRadius:m.role==='user'?'18px 18px 4px 18px':'18px 18px 18px 4px',padding:'12px 16px',maxWidth:'80%',color:m.role==='user'?'#fff':C.text,fontSize:14,lineHeight:1.7,whiteSpace:'pre-wrap', boxShadow:m.role==='user'?`0 4px 12px ${C.gold}44`:'none'}}>

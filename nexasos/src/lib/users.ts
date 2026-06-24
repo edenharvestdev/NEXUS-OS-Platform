@@ -1,7 +1,8 @@
-import { api } from './api'
+import { api, type ImpersonationState } from './api'
 
 const TOKEN_KEY = 'nexasos_token'
 const USER_KEY = 'nexasos_user'
+const IMPERSONATION_KEY = 'nexasos_impersonation'
 
 function migrateLegacyKeys() {
   if (typeof window === 'undefined') return
@@ -23,6 +24,7 @@ export function setToken(token: string) {
 export function clearToken() {
   localStorage.removeItem(TOKEN_KEY)
   localStorage.removeItem(USER_KEY)
+  localStorage.removeItem(IMPERSONATION_KEY)
 }
 
 export function getCachedUser(): any {
@@ -36,11 +38,26 @@ export function setCachedUser(user: any) {
   localStorage.setItem(USER_KEY, JSON.stringify(user))
 }
 
+export function getImpersonation(): ImpersonationState | null {
+  if (typeof window === 'undefined') return null
+  const raw = localStorage.getItem(IMPERSONATION_KEY)
+  return raw ? JSON.parse(raw) : null
+}
+
+function setImpersonation(state: ImpersonationState | null) {
+  if (!state) {
+    localStorage.removeItem(IMPERSONATION_KEY)
+    return
+  }
+  localStorage.setItem(IMPERSONATION_KEY, JSON.stringify(state))
+}
+
 export async function login(email: string, password: string) {
   try {
     const res = await api.signin(email, password)
     setToken(res.token)
     setCachedUser(res.user)
+    setImpersonation(null)
     return { success: true, user: res.user }
   } catch (e: any) {
     return { success: false, error: e.message || 'เข้าสู่ระบบไม่ได้' }
@@ -80,9 +97,43 @@ export async function refreshUser(): Promise<any> {
   try {
     const res = await api.getMe()
     setCachedUser(res.user)
+    setImpersonation(res.impersonation ?? null)
     return res.user
   } catch {
     clearToken()
     return null
   }
+}
+
+export async function refreshSession(): Promise<{ user: any; impersonation: ImpersonationState | null } | null> {
+  try {
+    const res = await api.getMe()
+    setCachedUser(res.user)
+    setImpersonation(res.impersonation ?? null)
+    return { user: res.user, impersonation: res.impersonation ?? null }
+  } catch {
+    clearToken()
+    return null
+  }
+}
+
+export async function startImpersonate(userId: string) {
+  const res = await api.impersonate(userId)
+  setToken(res.token)
+  setCachedUser(res.user)
+  setImpersonation(res.impersonation)
+  return res
+}
+
+export async function stopImpersonate() {
+  const res = await api.stopImpersonate()
+  setToken(res.token)
+  setCachedUser(res.user)
+  setImpersonation(res.impersonation)
+  return res
+}
+
+export function canUseImpersonation(impersonation: ImpersonationState | null): boolean {
+  if (!impersonation) return false
+  return impersonation.active || !!impersonation.canImpersonate
 }

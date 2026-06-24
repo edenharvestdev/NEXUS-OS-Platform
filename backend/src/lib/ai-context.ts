@@ -145,5 +145,5 @@ export async function buildScopedContext(
   if (scope === 'department') {
     return buildDepartmentContext(companyId, user.department || 'Operation', user.role || 'staff')
   }
-  return buildOrgContext(companyId, user.role || 'admin')
+  return buildOrgContext(companyId, user.role || 'admin', user.id)
 }

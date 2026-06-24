@@ -10,6 +10,7 @@ import {
 } from '../lib/ai-agents'
 import { buildScopedContext, saveUserMemory } from '../lib/ai-context'
 import { routeAI } from '../lib/ai-router'
+import { anyAIConfigured } from '../lib/ai-providers'
 import { queryAll, run, newId } from '../lib/db'
 
 function parseScope(raw: unknown): ChatScope {
@@ -47,11 +48,11 @@ async function askScopedAI(
   prompt: string,
   user: { company_id: string; id: string; role: string },
 ): Promise<{ text: string; provider: string; model: string; decision_rights: string }> {
-  const hasAnyKey = !!(process.env.GEMINI_API_KEY || process.env.ANTHROPIC_API_KEY || process.env.OPENAI_API_KEY || process.env.TYPHOON_API_KEY)
+  const hasAnyKey = anyAIConfigured()
   if (!hasAnyKey) {
     if (process.env.NODE_ENV === 'production') throw new Error('AI API keys not configured')
     return {
-      text: 'สวัสดีครับ! ตั้ง GEMINI_API_KEY (ขั้นต่ำ) ใน backend/.env เพื่อใช้ AI จริง',
+      text: 'สวัสดีครับ! ตั้ง OPENAI_API_KEY หรือ GEMINI_API_KEY ใน nexus-api เพื่อใช้ AI จริง',
       provider: 'none',
       model: 'demo',
       decision_rights: 'auto',

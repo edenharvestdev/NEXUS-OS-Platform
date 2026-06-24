@@ -73,8 +73,8 @@ export async function ocrReceipt(req: Request, res: Response): Promise<void> {
 ตอบเฉพาะ JSON เท่านั้น`
 
   try {
-    const { askGeminiVisionJSON } = await import('../lib/gemini')
-    const result = await askGeminiVisionJSON(prompt, fileBase64, fileMime || 'image/jpeg')
+    const { askAIVisionJSON } = await import('../lib/ai-providers')
+    const result = await askAIVisionJSON(prompt, fileBase64, fileMime || 'image/jpeg', { prefer: ['openai', 'gemini'] })
     await run(
       `INSERT INTO ai_logs (id,company_id,user_id,agent,action,tokens_used,cost_thb)
        VALUES ($1,$2,$3,'Finance OCR','สแกนใบเสร็จ',500,0.15)`,
@@ -82,7 +82,7 @@ export async function ocrReceipt(req: Request, res: Response): Promise<void> {
     )
     res.json({ result })
   } catch (e) {
-    res.status(503).json({ error: (e as Error).message || 'OCR unavailable — configure GEMINI_API_KEY' })
+    res.status(503).json({ error: (e as Error).message || 'OCR unavailable — configure OPENAI_API_KEY or GEMINI_API_KEY' })
   }
 }
 

@@ -19,6 +19,7 @@ import tasksRoutes             from './routes/tasks.route'
 import leaveRoutes             from './routes/leave.route'
 import workLogsRoutes        from './routes/work-logs.route'
 import dataDictionaryRoutes  from './routes/data-dictionary.route'
+import { getProviderStatus, anyAIConfigured } from './lib/ai-providers'
 import healthRoutes          from './routes/health.route'
 import aiRouterRoutes        from './routes/ai-router.route'
 import skillWalletRoutes     from './routes/skill-wallet.route'
@@ -36,6 +37,7 @@ import aiCommandRoutes       from './routes/ai-command.route'
 import userAiRoutes          from './routes/user-ai.route'
 import opsRoutes             from './routes/ops.route'
 import tamadaRoutes          from './routes/tamada.route'
+import hrRoutes              from './routes/hr.route'
 import { rateLimitMiddleware } from './middleware/rate-limit'
 import { requestMetricsMiddleware } from './middleware/request-metrics'
 import { deepHealth } from './controllers/deep-health.controller'
@@ -55,19 +57,21 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }))
 
 // ── Health Check ─────────────────────────────────────────────────
 app.get('/health', (_: Request, res: Response) => {
+  const ai = getProviderStatus()
   res.json({
     status: 'OK',
     app: 'NEXUS OS API',
     version: '3.0.0',
     database: process.env.DATABASE_URL ? 'PostgreSQL (Railway)' : 'SQLite (local)',
-    ai: process.env.GEMINI_API_KEY ? 'Gemini 2.0 Flash ✅' : 'Not configured ⚠️',
+    ai: anyAIConfigured() ? `Multi-provider ✅ (primary: ${ai.openai.configured ? 'OpenAI' : ai.gemini.configured ? 'Gemini' : 'fallback'})` : 'Not configured ⚠️',
     models: {
-      gemini: !!process.env.GEMINI_API_KEY,
-      claude: !!process.env.ANTHROPIC_API_KEY,
-      openai: !!process.env.OPENAI_API_KEY,
-      typhoon: !!process.env.TYPHOON_API_KEY,
+      gemini: ai.gemini.configured,
+      claude: ai.claude.configured,
+      openai: ai.openai.configured,
+      typhoon: ai.typhoon.configured,
       line: !!(process.env.LINE_CHANNEL_SECRET && process.env.LINE_CHANNEL_ACCESS_TOKEN),
     },
+    ai_models: ai,
     ts: new Date().toISOString(),
   })
 })
@@ -106,6 +110,7 @@ app.use('/api/ai-command',   aiCommandRoutes)
 app.use('/api/user-ai',      userAiRoutes)
 app.use('/api/ops',          opsRoutes)
 app.use('/api/tamada',       tamadaRoutes)
+app.use('/api/hr',           hrRoutes)
 
 // ── 404 Fallback ─────────────────────────────────────────────────
 app.use((_: Request, res: Response) =>

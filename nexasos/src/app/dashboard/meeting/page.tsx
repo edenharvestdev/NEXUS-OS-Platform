@@ -135,7 +135,7 @@ export default function MeetingPage() {
   return (
     <div style={{display:'flex',flexDirection:'column',gap:16,animation:'fadeIn 0.3s ease'}}>
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:10}}>
-        <div><div style={{fontSize:18,fontWeight:800,color:C.text}}>Meeting Brain AI</div><div style={{fontSize:12,color:C.text3,marginTop:2}}>สรุปการประชุมและสกัด Action Items ด้วย Gemini 2.0 Flash</div></div>
+        <div><div style={{fontSize:18,fontWeight:800,color:C.text}}>สรุปการประชุม</div><div style={{fontSize:12,color:C.text3,marginTop:2}}>สรุปการประชุมและรายการสิ่งที่ต้องทำต่อ</div></div>
         <div style={{display:'flex',gap:8}}>
           {selectedMeeting && !editing && (
             <button onClick={startEdit} style={{display:'flex',alignItems:'center',gap:6,padding:'8px 16px',borderRadius:10,background:C.surface,border:`1px solid ${C.border}`,color:C.text2,cursor:'pointer',fontSize:12,fontWeight:700}}><Ic n="edit" s={13}/>แก้ไขข้อมูล</button>

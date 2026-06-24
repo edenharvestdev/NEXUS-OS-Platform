@@ -162,7 +162,8 @@ export default function WorkLogPage() {
         onChange={setActiveTab}
       />
 
-      <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 14, overflow: 'hidden' }}>
+      <div className="table-scroll-x" style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 14, overflow: 'hidden' }}>
+        <div style={{ minWidth: 640 }}>
         <div style={{
           display: 'grid',
           gridTemplateColumns: isManager ? '120px 1fr 100px 100px 60px 80px auto' : '120px 1fr 100px 100px 60px 80px',
@@ -212,6 +213,7 @@ export default function WorkLogPage() {
             )}
           </div>
         ))}
+        </div>
       </div>
 
       {showForm && (

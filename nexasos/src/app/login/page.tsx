@@ -126,12 +126,12 @@ export default function LoginPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', fontFamily: 'Montserrat, sans-serif', position: 'relative', overflow: 'hidden' }} className="perspective-container">
+    <div className="login-shell perspective-container" style={{ fontFamily: 'Montserrat, sans-serif' }}>
       
       {/* 3D Animated Background is now globally applied via AppProvider */}
 
       {/* Top Controls (floating) */}
-      <div style={{ position: 'absolute', top: 24, right: 32, display: 'flex', gap: 12, zIndex: 99, animation: 'fadeIn 1s ease' }}>
+      <div className="login-controls">
         <PillToggle labelA="TH" labelB="EN" active={lang === 'th' ? 'a' : 'b'} onToggle={toggleLang} C={C} />
         <button onClick={toggleTheme} style={{
           width: 40, height: 40, borderRadius: 99, border: `1px solid ${C.border2}`,
@@ -143,7 +143,7 @@ export default function LoginPage() {
       </div>
 
       {/* ══ LEFT ══════════════════════════════════════════════════ */}
-      <div style={{ flex: 1, padding: '48px 64px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 40, maxWidth: '55%', position: 'relative', zIndex: 1 }}>
+      <div className="login-hero">
         {/* Brand */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 16, animation: 'slideInL 0.8s cubic-bezier(0.2, 0.8, 0.2, 1)' }}>
           <div style={{ width: 56, height: 56, borderRadius: 16, background: 'linear-gradient(135deg, #C4956A, #8B6F47)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, fontWeight: 900, color: '#fff', boxShadow: '0 8px 24px rgba(196,149,106,0.3)' }}>N</div>
@@ -155,7 +155,7 @@ export default function LoginPage() {
 
         {/* Hero */}
         <div style={{ animation: 'slideInL 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) 0.1s both' }}>
-          <div style={{ fontSize: 48, fontWeight: 900, color: C.text, lineHeight: 1.15, marginBottom: 16, letterSpacing: -1 }}>
+          <div className="login-hero-title" style={{ fontSize: 48, fontWeight: 900, color: C.text, lineHeight: 1.15, marginBottom: 16, letterSpacing: -1 }}>
             {t('login.hero1')}<br />
             <span style={{ color: C.gold, textShadow: `0 0 40px ${C.gold}44` }}>{t('login.hero2').replace('ด้วย ', '').includes('AI') ? <>ด้วย <span>AI</span> อัจฉริยะ</> : t('login.hero2')}</span>
           </div>
@@ -163,7 +163,7 @@ export default function LoginPage() {
         </div>
 
         {/* Feature cards */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div className="login-features" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           {FEATURES.map(({ Icon, titleKey, subKey, dot }, i) => (
             <div key={i} className="glass-panel" style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '16px 20px', borderRadius: 16, animation: `slideInL 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) ${0.2 + i * 0.1}s both`, transition: 'transform 0.3s' }}
               onMouseEnter={e => (e.currentTarget.style.transform = 'translateX(10px)')} onMouseLeave={e => (e.currentTarget.style.transform = 'translateX(0)')}>
@@ -180,13 +180,13 @@ export default function LoginPage() {
       </div>
 
       {/* ── Separator ── */}
-      <div style={{ position: 'absolute', left: '55%', top: '10%', height: '80%', width: 1, background: `linear-gradient(to bottom, transparent, ${C.border2}, transparent)`, pointerEvents: 'none', zIndex: 1 }} />
+      <div className="login-separator" style={{ background: `linear-gradient(to bottom, transparent, ${C.border2}, transparent)` }} />
 
       {/* ══ RIGHT ═════════════════════════════════════════════════ */}
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px', position: 'relative', zIndex: 2 }}>
+      <div className="login-form-col">
         
         {/* Floating 3D Glass Form Container */}
-        <div className="glass-panel rotate-3d-hover" style={{ 
+        <div className="glass-panel rotate-3d-hover login-form-card" style={{ 
             width: '100%', maxWidth: 440, padding: 40, borderRadius: 32,
             animation: 'fadeUp 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) 0.3s both',
         }}>

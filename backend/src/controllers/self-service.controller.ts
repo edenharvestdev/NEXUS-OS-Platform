@@ -5,10 +5,13 @@ import { writeAudit } from '../lib/audit'
 import { generateDailyTasks } from '../lib/daily-task-agent'
 import { recordSkillEvidence } from '../lib/skill-wallet'
 
-/** Unified self-service hub — every employee fills all layers from one place */
+/** Unified NEXUS OS hub — Intelligence layers + HR/Payroll in one payload */
 export async function getHub(req: Request, res: Response): Promise<void> {
   const uid = req.user.id
   const cid = req.user.company_id
+  const role = (req.user.role || 'staff').toLowerCase()
+  const today = new Date().toISOString().slice(0, 10)
+  const year = new Date().getFullYear()
 
   const [profile, capacity, dictionary, myKpis, myKnowledge, myPatients, myWorkLogs, mySkills, dailyTasks] = await Promise.all([
     queryOne('SELECT id, name, email, role, department, phone, leave_used, leave_total FROM users WHERE id = $1', [uid]),
@@ -22,9 +25,62 @@ export async function getHub(req: Request, res: Response): Promise<void> {
     queryAll('SELECT * FROM daily_ai_tasks WHERE user_id = $1 AND done = 0 ORDER BY created_at DESC', [uid]),
   ])
 
+  const attendanceToday = await queryOne(
+    'SELECT * FROM time_attendance WHERE company_id = $1 AND user_id = $2 AND work_date = $3',
+    [cid, uid, today],
+  )
+  const myLeavePending = await queryAll(
+    `SELECT id, type, days, status, approve_flag, start_date FROM leave_requests WHERE company_id = $1 AND user_id = $2 ORDER BY created_at DESC LIMIT 5`,
+    [cid, uid],
+  )
+  const myOtPending = await queryAll(
+    `SELECT id, work_date, hours, status FROM overtime_requests WHERE company_id = $1 AND user_id = $2 ORDER BY created_at DESC LIMIT 5`,
+    [cid, uid],
+  )
+  const latestPayslip = await queryOne(
+    `SELECT p.*, pp.year, pp.month FROM payslips p JOIN payroll_periods pp ON pp.id = p.period_id
+     WHERE p.company_id = $1 AND p.user_id = $2 ORDER BY pp.year DESC, pp.month DESC LIMIT 1`,
+    [cid, uid],
+  )
+  const leaveQuotas = await queryAll(
+    `SELECT q.quota_days, q.used_days, lt.name as leave_name FROM employee_leave_quota q
+     JOIN leave_types lt ON lt.id = q.leave_type_id
+     WHERE q.company_id = $1 AND q.user_id = $2 AND q.year = $3 LIMIT 6`,
+    [cid, uid, year],
+  )
+
+  let hrAdmin: Record<string, unknown> | null = null
+  if (['admin', 'hr', 'finance'].includes(role)) {
+    const [pendingLeave, pendingOt, period, anomalies] = await Promise.all([
+      queryOne(`SELECT COUNT(*) as c FROM leave_requests WHERE company_id = $1 AND status = 'pending'`, [cid]),
+      queryOne(`SELECT COUNT(*) as c FROM overtime_requests WHERE company_id = $1 AND status = 'pending'`, [cid]),
+      queryOne(`SELECT * FROM payroll_periods WHERE company_id = $1 ORDER BY year DESC, month DESC LIMIT 1`, [cid]),
+      queryOne(
+        `SELECT COUNT(*) as c FROM employee_daily_calendar WHERE company_id = $1 AND absence_hours > 0 AND period_id = (
+          SELECT id FROM payroll_periods WHERE company_id = $1 ORDER BY year DESC, month DESC LIMIT 1
+        )`,
+        [cid],
+      ),
+    ])
+    hrAdmin = {
+      pending_leave: Number(pendingLeave?.c || 0),
+      pending_ot: Number(pendingOt?.c || 0),
+      payroll_period: period || null,
+      calendar_anomalies: Number(anomalies?.c || 0),
+    }
+  }
+
   res.json({
     profile,
     capacity: capacity || { hours_per_day: 8, workload_score: 50, skills_declared: '[]' },
+    hr: {
+      attendance_today: attendanceToday,
+      leave_requests: myLeavePending,
+      ot_requests: myOtPending,
+      latest_payslip: latestPayslip,
+      leave_quotas: leaveQuotas,
+      admin: hrAdmin,
+    },
     layers: {
       L0_dictionary: dictionary,
       L0_kpi_entries: myKpis,

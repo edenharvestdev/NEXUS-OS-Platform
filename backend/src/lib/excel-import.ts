@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs'
 import { queryAll, queryOne, run, newId } from './db'
 import { markSourcesImported } from './onboarding'
-import { seedTamadaDictionary, seedTamadaBranches } from './tamada-seed'
+import { seedTamadaDictionary, seedTamadaBranches, seedTamadaEntities } from './tamada-seed'
 
 type Row = Record<string, string>
 
@@ -45,16 +45,17 @@ export async function importCSV(
   let imported = 0
 
   if (target === 'tamada_taxonomy') {
+    const entities = await seedTamadaEntities(companyId, userId)
     const dictionary = await seedTamadaDictionary(companyId, userId)
     const branches = await seedTamadaBranches(companyId, userId)
-    imported = dictionary + branches
+    imported = entities + dictionary + branches
     await markSourcesImported(companyId)
     await run(
       `INSERT INTO ingestion_jobs (id, company_id, user_id, source, filename, rows_imported, status, meta)
        VALUES ($1,$2,$3,$4,$5,$6,'completed',$7)`,
       [
         newId(), companyId, userId, 'tamada_taxonomy', 'tamada_taxonomy.csv', imported,
-        JSON.stringify({ target, dictionary, branches }),
+        JSON.stringify({ target, entities, dictionary, branches }),
       ],
     )
     return { rows_imported: imported, errors }
@@ -65,8 +66,8 @@ export async function importCSV(
     try {
       if (target === 'transactions' || target === 'pos') {
         await run(
-          `INSERT INTO transactions (id, company_id, user_id, description, amount, type, category, status, date)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,'pending',$8)`,
+          `INSERT INTO transactions (id, company_id, user_id, description, amount, type, category, status, date, entity, branch_code)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,'pending',$8,$9,$10)`,
           [
             newId(), companyId, userId,
             row.description || row.desc || 'Imported',
@@ -74,6 +75,61 @@ export async function importCSV(
             row.type === 'income' ? 'income' : 'expense',
             row.category || (target === 'pos' ? 'POS' : 'Imported'),
             row.date || null,
+            row.entity || 'all',
+            row.branch_code || row.branch || null,
+          ],
+        )
+        imported++
+      } else if (target === 'tamada_cases' || target === 'tcs') {
+        const branchCode = row.branch_code || row.branch
+        if (!branchCode) { errors.push('branch_code required for tamada case'); continue }
+        await run(
+          `INSERT INTO tamada_cases (
+            id, company_id, branch_code, user_id, treatment_code, treatment_name, amount,
+            doctor_id, booking_status, no_show, case_date
+          ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+          [
+            newId(), companyId, branchCode, userId,
+            row.treatment_code || row.customer_id || null,
+            row.treatment_name || row.treatment_code || 'Treatment',
+            parseFloat(String(row.amount || '0').replace(/,/g, '')),
+            row.doctor_id || null,
+            row.booking_status || 'completed',
+            row.no_show === '1' || row.no_show === 'true' ? 1 : 0,
+            row.date || row.case_date || null,
+          ],
+        )
+        imported++
+      } else if (target === 'sdx_cases' || target === 'sdx_mcs') {
+        const branchCode = row.branch_code || 'SDX-HQ'
+        await run(
+          `INSERT INTO sdx_cases (
+            id, company_id, branch_code, user_id, treatment_type, amount, chair_minutes, doctor_id, case_date
+          ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+          [
+            newId(), companyId, branchCode, userId,
+            row.treatment_type || row.treatment_code || null,
+            parseFloat(String(row.amount || '0').replace(/,/g, '')),
+            parseInt(String(row.chair_minutes || '0'), 10),
+            row.doctor_id || null,
+            row.date || row.case_date || null,
+          ],
+        )
+        imported++
+      } else if (target === 'franchise_audits') {
+        const branchCode = row.branch_code || row.branch
+        if (!branchCode) { errors.push('branch_code required for franchise audit'); continue }
+        await run(
+          `INSERT INTO franchise_audits (
+            id, company_id, branch_code, user_id, checklist_passed, checklist_total, mystery_score, notes, audit_date
+          ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+          [
+            newId(), companyId, branchCode, userId,
+            parseInt(String(row.checklist_passed || '0'), 10),
+            parseInt(String(row.checklist_total || '0'), 10),
+            row.mystery_score ? parseFloat(row.mystery_score) : null,
+            row.notes || null,
+            row.date || row.audit_date || null,
           ],
         )
         imported++

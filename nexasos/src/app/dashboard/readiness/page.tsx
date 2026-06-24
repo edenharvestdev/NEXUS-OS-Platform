@@ -32,7 +32,7 @@ export default function ReadinessPage() {
         <StatCard icon="zap" label="Readiness" value={data.readiness} color={readinessColor} />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+      <div className="grid-cols-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
         {Object.values(data.dimensions || {}).map((d: any) => (
           <div key={d.label} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: 16 }}>
             <div style={{ fontSize: 11, color: C.text3 }}>{d.label}</div>

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="64" y1="48" x2="448" y2="464" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#D4A96A"/>
+      <stop offset="0.55" stop-color="#B48648"/>
+      <stop offset="1" stop-color="#7A5A32"/>
+    </linearGradient>
+  </defs>
+  <!-- Full-bleed background for Android adaptive / maskable safe zone -->
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <!-- Logo centered in ~80% safe zone -->
+  <rect x="51" y="51" width="410" height="410" rx="86" fill="rgba(255,255,255,0.08)"/>
+  <text x="256" y="318" text-anchor="middle" font-family="Montserrat, system-ui, sans-serif" font-size="240" font-weight="900" fill="#FFFFFF">N</text>
+</svg>

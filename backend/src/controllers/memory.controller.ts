@@ -13,7 +13,7 @@ export async function explain(req: Request, res: Response): Promise<void> {
   const { topic } = req.body
   if (!topic) { res.status(400).json({ error: 'topic required' }); return }
   const breadcrumbs = await explainDrop(req.user.company_id, topic)
-  const context = await buildOrgContext(req.user.company_id, req.user.role)
+  const context = await buildOrgContext(req.user.company_id, req.user.role, req.user.id)
   let aiSummary = ''
   try {
     const prompt = `อธิบายสาเหตุที่เป็นไปได้ของ "${topic}" จากข้อมูลองค์กร:\n${breadcrumbs.join('\n')}`

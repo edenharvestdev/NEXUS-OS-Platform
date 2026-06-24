@@ -26,8 +26,12 @@ export async function getTaxonomy(req: Request, res: Response): Promise<void> {
   })
 }
 
-export async function getEntities(_req: Request, res: Response): Promise<void> {
-  res.json({ entities: TAMADA_ENTITIES })
+export async function getEntities(req: Request, res: Response): Promise<void> {
+  const rows = await queryAll(
+    'SELECT * FROM entities WHERE company_id = $1 ORDER BY entity_key',
+    [req.user.company_id],
+  )
+  res.json({ template: TAMADA_ENTITIES, entities: rows })
 }
 
 export async function getBranches(req: Request, res: Response): Promise<void> {

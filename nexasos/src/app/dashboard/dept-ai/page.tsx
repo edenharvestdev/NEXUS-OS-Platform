@@ -39,7 +39,7 @@ export default function DeptAIPage() {
   }
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: isManager ? '1fr 320px' : '1fr', gap: 20 }}>
+    <div className="grid-stack-mobile" style={{ display: 'grid', gridTemplateColumns: isManager ? '1fr 320px' : '1fr', gap: 20 }}>
       <AIChatPanel
         scope="department"
         title={`AI แผนก · ${user?.department || 'แผนก'}`}

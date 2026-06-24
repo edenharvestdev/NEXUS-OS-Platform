@@ -7,6 +7,10 @@ import { NEXUS_EXTENDED_SQL, WORKLOG_SLA_MIGRATIONS } from './nexus-extended-sch
 import { NEXUS_FULL_SQL } from './nexus-full-schema'
 import { NEXUS_AI_SQL, CHAT_SCOPE_MIGRATIONS } from './nexus-ai-schema'
 import { NEXUS_OPS_SQL } from './nexus-ops-schema'
+import { NEXUS_ENTITY_SQL, ENTITY_SCOPING_MIGRATIONS } from './nexus-entity-schema'
+import { NEXUS_HR_SQL } from './nexus-hr-schema'
+import { NEXUS_HR_PHASE5_SQL, HR_PHASE5_MIGRATIONS } from './nexus-hr-phase5-schema'
+import { NEXUS_HR_PHASE6_SQL, HR_PHASE6_MIGRATIONS } from './nexus-hr-phase6-schema'
 
 const DATA_DIR = path.join(process.cwd(), 'data')
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true })
@@ -99,6 +103,16 @@ db.exec(NEXUS_EXTENDED_SQL)
 db.exec(NEXUS_FULL_SQL)
 db.exec(NEXUS_AI_SQL)
 db.exec(NEXUS_OPS_SQL)
+db.exec(NEXUS_ENTITY_SQL)
+db.exec(NEXUS_HR_SQL)
+db.exec(NEXUS_HR_PHASE5_SQL)
+db.exec(NEXUS_HR_PHASE6_SQL)
+for (const sql of HR_PHASE5_MIGRATIONS) {
+  try { db.exec(sql) } catch { /* exists */ }
+}
+for (const sql of HR_PHASE6_MIGRATIONS) {
+  try { db.exec(sql) } catch { /* exists */ }
+}
 for (const sql of WORKLOG_SLA_MIGRATIONS) {
   try { db.exec(sql) } catch { /* column exists */ }
 }
@@ -106,6 +120,9 @@ for (const sql of DICTIONARY_MIGRATIONS) {
   try { db.exec(sql) } catch { /* column exists */ }
 }
 for (const sql of CHAT_SCOPE_MIGRATIONS) {
+  try { db.exec(sql) } catch { /* column exists */ }
+}
+for (const sql of ENTITY_SCOPING_MIGRATIONS) {
   try { db.exec(sql) } catch { /* column exists */ }
 }
 
