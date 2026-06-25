@@ -69,3 +69,38 @@ CREATE TRIGGER trg_audit_logs_append_only
   BEFORE UPDATE OR DELETE ON audit_logs
   FOR EACH ROW EXECUTE FUNCTION audit_logs_block_mutation();
 `
+
+/**
+ * AIEG-1: a record of every AI provider call — what scope was allowed/blocked,
+ * how many sensitive tokens were redacted, which model, linked to the request.
+ * Stores a prompt HASH, never the raw prompt (the prompt may contain data we
+ * must not persist). Linked to audit_logs via request_id.
+ */
+export const AI_QUERY_LOGS_DDL = `
+CREATE TABLE IF NOT EXISTS ai_query_logs (
+  ai_query_id TEXT PRIMARY KEY,
+  company_id TEXT,
+  user_id TEXT,
+  request_id TEXT,
+  provider TEXT,
+  model_used TEXT,
+  task_type TEXT,
+  security_level TEXT,
+  redaction_mode TEXT,
+  redaction_count INTEGER DEFAULT 0,
+  redaction_hits_json TEXT,
+  restricted_attempt INTEGER DEFAULT 0,
+  blocked INTEGER DEFAULT 0,
+  allowed_data_scope TEXT,
+  blocked_data_scope TEXT,
+  prompt_hash TEXT,
+  prompt_chars INTEGER,
+  response_summary TEXT,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_ai_query_logs_company ON ai_query_logs(company_id);
+CREATE INDEX IF NOT EXISTS idx_ai_query_logs_user ON ai_query_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_ai_query_logs_request ON ai_query_logs(request_id);
+CREATE INDEX IF NOT EXISTS idx_ai_query_logs_created ON ai_query_logs(created_at);
+CREATE INDEX IF NOT EXISTS idx_ai_query_logs_restricted ON ai_query_logs(restricted_attempt);
+`

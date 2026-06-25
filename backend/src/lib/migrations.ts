@@ -1,5 +1,5 @@
 import { queryAll, queryOne, run, execMulti } from './db'
-import { AUDIT_LOGS_DDL, AUDIT_LOGS_APPENDONLY_DDL } from './nexus-audit-schema'
+import { AUDIT_LOGS_DDL, AUDIT_LOGS_APPENDONLY_DDL, AI_QUERY_LOGS_DDL } from './nexus-audit-schema'
 
 export type Migration = {
   version: number
@@ -88,6 +88,11 @@ export const MIGRATIONS: Migration[] = [
     up: AUDIT_LOGS_APPENDONLY_DDL, // Postgres trigger enforcement (skipped on SQLite)
     pgOnly: true,
     critical: true,
+  },
+  {
+    version: 13,
+    name: 'ai_query_logs_table',
+    up: AI_QUERY_LOGS_DDL, // AIEG-1 AI egress log (PG + SQLite)
   },
 ]
 
