@@ -2,19 +2,30 @@ import { queryAll, queryOne, run, newId } from './db'
 import { DEFAULT_DEPARTMENTS } from './nexus-extended-schema'
 import { initUserSkills } from './skill-wallet'
 
-/** แผนกมาตรฐาน — 1 แผนก = 1 system role = 1 module หลัก */
+/** แผนกมาตรฐาน — โครงสร้าง Saduak Suay Mai PCL · 1 แผนก = 1 system role */
 export const DEPARTMENT_DEFINITIONS: Array<{
   name: string
   systemRole: string
   label_th: string
+  subUnits?: Array<{ name: string; label_th: string }>
 }> = [
-  { name: 'Management', systemRole: 'admin', label_th: 'ผู้บริหาร' },
-  { name: 'Finance', systemRole: 'finance', label_th: 'การเงิน' },
-  { name: 'HR', systemRole: 'hr', label_th: 'ทรัพยากรบุคคล' },
-  { name: 'Sales', systemRole: 'sales', label_th: 'ขาย' },
+  { name: 'CEO Office', systemRole: 'ceo', label_th: 'สำนักซีอีโอ' },
+  {
+    name: 'Operations', systemRole: 'operations', label_th: 'ปฏิบัติการ',
+    subUnits: [
+      { name: 'Customer Support-Admin', label_th: 'ลูกค้าสัมพันธ์ / แอดมิน' },
+      { name: 'Personal Care', label_th: 'ดูแลส่วนบุคคล' },
+      { name: 'Telesales', label_th: 'เทเลเซลส์' },
+    ],
+  },
   { name: 'Marketing', systemRole: 'marketing', label_th: 'การตลาด' },
+  { name: 'Medical', systemRole: 'medical', label_th: 'การแพทย์' },
+  { name: 'Finance', systemRole: 'finance', label_th: 'การเงินและบัญชี' },
+  { name: 'HR', systemRole: 'hr', label_th: 'ทรัพยากรบุคคล (People)' },
   { name: 'IT', systemRole: 'it', label_th: 'เทคโนโลยีสารสนเทศ' },
-  { name: 'Operation', systemRole: 'staff', label_th: 'ปฏิบัติการ' },
+  { name: 'Warehouse', systemRole: 'warehouse', label_th: 'คลังสินค้าและจัดซื้อ' },
+  { name: 'Franchise', systemRole: 'franchise', label_th: 'แฟรนไชส์' },
+  { name: 'Dental', systemRole: 'dental', label_th: 'ทันตกรรม' },
 ]
 
 const DEPT_MAP = new Map(DEPARTMENT_DEFINITIONS.map(d => [d.name, d]))
@@ -36,7 +47,7 @@ export async function initCompanyDepartments(companyId: string, adminUserId: str
     if (!exists) {
       await run(
         'INSERT INTO departments (id, company_id, name, head_user_id) VALUES ($1,$2,$3,$4)',
-        [newId(), companyId, dept.name, dept.name === 'Management' ? adminUserId : null],
+        [newId(), companyId, dept.name, dept.name === 'CEO Office' ? adminUserId : null],
       )
     }
   }

@@ -142,7 +142,7 @@ export async function importCSV(
            VALUES ($1,$2,$3,$4,$5,$6,$7,'active')`,
           [
             newId(), companyId, row.name || 'Imported User', email,
-            hash, row.role || 'staff', row.department || 'Operation',
+            hash, row.role || 'staff', row.department || 'Operations',
           ],
         )
         imported++
