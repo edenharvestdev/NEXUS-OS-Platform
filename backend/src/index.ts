@@ -4,6 +4,11 @@ import helmet from 'helmet'
 import dotenv from 'dotenv'
 dotenv.config()
 
+// Fail fast (and loud, with explicit exit so the uncaughtException guard can't
+// keep a keyless server alive) if a strong ENCRYPTION_KEY is missing in prod.
+import { assertEncryptionReady } from './lib/encryption'
+try { assertEncryptionReady() } catch (e) { console.error('🔐', (e as Error).message); process.exit(1) }
+
 import { initSchema } from './lib/db'
 import { corsMiddleware }     from './middleware/cors'
 import authRoutes             from './routes/auth.route'
