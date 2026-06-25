@@ -14,9 +14,11 @@ const TASK_TEMPLATES: Record<string, string[]> = {
 /** L2 — assign daily tasks by role + capacity (rule-based; AI optional via router) */
 export async function generateDailyTasks(companyId: string, userId: string, role: string) {
   const today = new Date().toISOString().slice(0, 10)
+  const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10)
+  // Cross-DB: compare against a [today, tomorrow) range instead of SQLite's date().
   const existing = await queryOne(
-    `SELECT COUNT(*) as c FROM daily_ai_tasks WHERE company_id = $1 AND user_id = $2 AND date(created_at) = date($3)`,
-    [companyId, userId, today],
+    `SELECT COUNT(*) as c FROM daily_ai_tasks WHERE company_id = $1 AND user_id = $2 AND created_at >= $3 AND created_at < $4`,
+    [companyId, userId, today, tomorrow],
   )
   if (Number(existing?.c || 0) > 0) return queryAll(
     `SELECT * FROM daily_ai_tasks WHERE company_id = $1 AND user_id = $2 AND done = 0 ORDER BY created_at DESC`,
@@ -42,13 +44,15 @@ export async function generateDailyTasks(companyId: string, userId: string, role
 }
 
 export async function getBurnoutRisk(companyId: string) {
+  // Cross-DB: compute the 7-day cutoff in JS instead of SQLite's date('now', ...).
+  const since = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10)
   const rows = await queryAll(
     `SELECT u.id, u.name, u.role, COALESCE(c.workload_score, 50) as workload,
       (SELECT COUNT(*) FROM daily_ai_tasks t WHERE t.user_id = u.id AND t.done = 0) as open_tasks,
-      (SELECT COUNT(*) FROM work_logs w WHERE w.user_id = u.id AND w.created_at >= date('now', '-7 days')) as logs_7d
+      (SELECT COUNT(*) FROM work_logs w WHERE w.user_id = u.id AND w.created_at >= $2) as logs_7d
      FROM users u LEFT JOIN user_capacity c ON c.user_id = u.id
      WHERE u.company_id = $1 AND u.status = 'active'`,
-    [companyId],
+    [companyId, since],
   )
   return rows.map((u: any) => ({
     ...u,
