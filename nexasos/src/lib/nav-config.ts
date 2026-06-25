@@ -6,6 +6,7 @@ import {
   Sparkles, Brain, Sunrise, TrendingUp,   Building2,
   ListTodo, Banknote, FileBarChart, UserCog, Globe,
   HelpCircle, CheckSquare, BookOpen, Clock, Wallet as WalletIcon, Timer,
+  Headset, Stethoscope, Smile, Warehouse, Store,
 } from 'lucide-react'
 
 export type NavLink = {
@@ -161,19 +162,24 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     titleKey: 'nav.section.dept',
     entries: [
-      link('finance', 'nav.finance', Wallet, 'finance', ['admin', 'finance'], '/dashboard/finance'),
-      link('sales', 'nav.sales', Target, 'sales', ['admin', 'sales'], '/dashboard/sales'),
-      link('marketing', 'nav.marketing', Megaphone, 'marketing', ['admin', 'marketing'], '/dashboard/marketing'),
+      link('operations', 'nav.operations', Headset, 'operations', ['admin', 'ceo', 'operations'], '/dashboard/operations'),
+      link('medical', 'nav.medical', Stethoscope, 'medical', ['admin', 'ceo', 'medical'], '/dashboard/medical'),
+      link('dental', 'nav.dental', Smile, 'dental', ['admin', 'ceo', 'dental'], '/dashboard/dental'),
+      link('finance', 'nav.finance', Wallet, 'finance', ['admin', 'ceo', 'finance'], '/dashboard/finance'),
+      link('marketing', 'nav.marketing', Megaphone, 'marketing', ['admin', 'ceo', 'marketing'], '/dashboard/marketing'),
+      link('warehouse', 'nav.warehouse', Warehouse, 'warehouse', ['admin', 'ceo', 'warehouse'], '/dashboard/warehouse'),
+      link('franchise', 'nav.franchise', Store, 'franchise', ['admin', 'ceo', 'franchise'], '/dashboard/franchise'),
+      link('sales', 'nav.sales', Target, 'sales', ['admin', 'ceo', 'sales'], '/dashboard/sales'),
     ],
   },
   {
     titleKey: 'nav.section.exec',
     entries: [
-      link('readiness', 'nav.readiness', Sunrise, 'readiness', ['admin'], '/dashboard/readiness'),
-      link('feasibility', 'nav.feasibility', TrendingUp, 'feasibility', ['admin'], '/dashboard/feasibility'),
+      link('readiness', 'nav.readiness', Sunrise, 'readiness', ['admin', 'ceo'], '/dashboard/readiness'),
+      link('feasibility', 'nav.feasibility', TrendingUp, 'feasibility', ['admin', 'ceo'], '/dashboard/feasibility'),
       link('onboarding', 'nav.onboarding', Sparkles, 'onboarding', ['admin', 'hr', 'it'], '/dashboard/onboarding'),
       link('memory', 'nav.memory', Brain, 'memory', ['admin', 'it'], '/dashboard/memory'),
-      link('audit', 'nav.audit', Activity, 'audit', ['admin', 'it', 'hr'], '/dashboard/audit'),
+      link('audit', 'nav.audit', Activity, 'audit', ['admin', 'ceo', 'it', 'hr'], '/dashboard/audit'),
     ],
   },
   {

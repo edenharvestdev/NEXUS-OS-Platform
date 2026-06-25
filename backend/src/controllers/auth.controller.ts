@@ -30,7 +30,7 @@ export async function signup(req: Request, res: Response): Promise<void> {
 
   await run('INSERT INTO companies (id,name,slug) VALUES ($1,$2,$3)', [company_id, companyName, slug])
   await run(
-    `INSERT INTO users (id,company_id,name,email,password_hash,role,department,color) VALUES ($1,$2,$3,$4,$5,'admin','Management','#C4956A')`,
+    `INSERT INTO users (id,company_id,name,email,password_hash,role,department,color) VALUES ($1,$2,$3,$4,$5,'admin','CEO Office','#C4956A')`,
     [user_id, company_id, name, email, hash]
   )
   await initCompanyDepartments(company_id, user_id)

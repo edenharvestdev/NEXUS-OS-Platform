@@ -40,10 +40,17 @@ export async function ensureHrDefaults(companyId: string): Promise<void> {
       [rootId, companyId],
     )
     for (const dept of DEPARTMENT_DEFINITIONS) {
+      const deptId = newId()
       await run(
         `INSERT INTO org_units (id, company_id, parent_id, level, code, name_th, name_en) VALUES ($1,$2,$3,2,$4,$5,$6)`,
-        [newId(), companyId, rootId, dept.name.toUpperCase().slice(0, 8), dept.label_th, dept.name],
+        [deptId, companyId, rootId, dept.name.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8), dept.label_th, dept.name],
       )
+      for (const sub of dept.subUnits ?? []) {
+        await run(
+          `INSERT INTO org_units (id, company_id, parent_id, level, code, name_th, name_en) VALUES ($1,$2,$3,3,$4,$5,$6)`,
+          [newId(), companyId, deptId, sub.name.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8), sub.label_th, sub.name],
+        )
+      }
     }
   }
 
