@@ -2,6 +2,13 @@ import { Request, Response, NextFunction } from 'express'
 import { canAccessModule, normalizeRole } from '../lib/rbac'
 import { userCanAccessModule } from '../lib/user-permissions'
 
+/** Department-head / management roles — everyone except plain `staff`.
+ *  Use for manager-level actions (reviewing work logs, AI task assignment). */
+export const MANAGER_ROLES = [
+  'admin', 'ceo', 'hr', 'finance', 'sales', 'marketing', 'it',
+  'operations', 'medical', 'dental', 'warehouse', 'franchise',
+] as const
+
 export function requireRole(...roles: string[]) {
   return (req: Request, res: Response, next: NextFunction): void => {
     const role = normalizeRole(req.user?.role)

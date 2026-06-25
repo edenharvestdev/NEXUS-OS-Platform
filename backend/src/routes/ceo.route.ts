@@ -5,6 +5,6 @@ import { requireRole } from '../middleware/rbac'
 
 const r = Router()
 r.use(authMiddleware)
-r.get('/brief', requireRole('admin'), c.getBrief)
+r.get('/brief', requireRole('admin', 'ceo'), c.getBrief)
 
 export default r

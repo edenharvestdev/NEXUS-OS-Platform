@@ -5,7 +5,7 @@ import { requireRole } from '../middleware/rbac'
 
 const r = Router()
 r.use(authMiddleware)
-r.get('/', requireRole('admin', 'hr', 'it'), c.getAll)
+r.get('/', requireRole('admin', 'ceo', 'hr', 'it'), c.getAll)
 r.post('/', requireRole('admin', 'hr'), c.create)
 r.patch('/:id', requireRole('admin', 'hr'), c.update)
 r.post('/:id/review', requireRole('admin', 'hr'), c.reviewPerformance)
