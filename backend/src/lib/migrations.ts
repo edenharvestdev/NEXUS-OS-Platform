@@ -1,4 +1,5 @@
 import { queryAll, queryOne, run, execMulti } from './db'
+import { AUDIT_LOGS_DDL, AUDIT_LOGS_APPENDONLY_DDL } from './nexus-audit-schema'
 
 export type Migration = {
   version: number
@@ -75,6 +76,18 @@ export const MIGRATIONS: Migration[] = [
     version: 10,
     name: 'entity_side_tables',
     up: '', // applied via NEXUS_ENTITY_PG at boot
+  },
+  {
+    version: 11,
+    name: 'audit_logs_table',
+    up: AUDIT_LOGS_DDL, // P1 append-only audit table + indexes (PG + SQLite)
+  },
+  {
+    version: 12,
+    name: 'audit_logs_append_only',
+    up: AUDIT_LOGS_APPENDONLY_DDL, // Postgres trigger enforcement (skipped on SQLite)
+    pgOnly: true,
+    critical: true,
   },
 ]
 

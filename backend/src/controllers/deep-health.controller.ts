@@ -3,6 +3,7 @@ import { queryOne } from '../lib/db'
 import { getQueueStats } from '../lib/job-queue'
 import { getMigrationStatus } from '../lib/migrations'
 import { getStorageStats } from '../lib/file-storage'
+import { auditWriteFailures } from '../lib/audit'
 
 export async function deepHealth(_req: Request, res: Response): Promise<void> {
   const core: Record<string, { ok: boolean; detail?: string }> = {}
@@ -32,6 +33,12 @@ export async function deepHealth(_req: Request, res: Response): Promise<void> {
 
   const storage = getStorageStats()
   core.file_storage = { ok: true, detail: storage.root }
+
+  // Audit pipeline health — non-zero means audit writes are failing silently.
+  core.audit = {
+    ok: auditWriteFailures === 0,
+    detail: auditWriteFailures === 0 ? 'healthy' : `${auditWriteFailures} write failures`,
+  }
 
   const emailConfigured = !!(process.env.RESEND_API_KEY || process.env.SMTP_HOST)
   optional.email = {
