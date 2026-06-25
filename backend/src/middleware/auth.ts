@@ -1,6 +1,8 @@
 import { Request, Response, NextFunction } from 'express'
 import jwt from 'jsonwebtoken'
+import crypto from 'crypto'
 import { queryOne } from '../lib/db'
+import { patchContext } from '../lib/request-context'
 
 function getJwtSecret(): string {
   const secret = process.env.JWT_SECRET
@@ -28,6 +30,16 @@ export async function authMiddleware(req: Request, res: Response, next: NextFunc
     if (!user) { res.status(401).json({ error: 'User not found' }); return }
     req.user = { ...user, companies: { id: user.company_id, name: user.company_name } }
     req.jwtPayload = payload
+    // Attach actor identity to the request context so audit logs can record
+    // who did what without threading it through every handler. sessionId is a
+    // stable per-token hash (no jti in the JWT yet).
+    patchContext({
+      actorUserId: user.id,
+      actorRole: user.role,
+      companyId: user.company_id,
+      impersonatedBy: payload.impersonated_by,
+      sessionId: crypto.createHash('sha256').update(token).digest('hex').slice(0, 24),
+    })
     if (payload.impersonated_by) {
       const actor = await queryOne('SELECT id, name, email, role FROM users WHERE id = $1', [payload.impersonated_by])
       req.impersonation = { active: true, actor }
