@@ -1,3 +1,4 @@
+import './middleware/async-guard' // MUST be first: patches Router so async handler errors return 500 instead of hanging
 import express, { Request, Response, NextFunction } from 'express'
 import helmet from 'helmet'
 import dotenv from 'dotenv'

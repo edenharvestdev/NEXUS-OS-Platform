@@ -1,6 +1,13 @@
 import { Request, Response } from 'express'
 import { queryAll, queryOne, run, newId } from '../lib/db'
 
+/** Normalise a DB timestamp to YYYY-MM-DD — Postgres returns a Date, SQLite a string. */
+function toDayKey(v: unknown): string {
+  if (typeof v === 'string') return v.slice(0, 10)
+  if (v instanceof Date) return v.toISOString().slice(0, 10)
+  return new Date().toISOString().slice(0, 10)
+}
+
 // ── GET /api/ai-stats ─────────────────────────────────────────────
 export async function getStats(req: Request, res: Response): Promise<void> {
   const logs = await queryAll(
@@ -24,7 +31,7 @@ export async function getStats(req: Request, res: Response): Promise<void> {
   // Daily usage (last 7 days)
   const daily: Record<string, { tokens: number; cost: number; count: number }> = {}
   for (const l of logs) {
-    const day = (l.created_at as string)?.slice(0, 10) || new Date().toISOString().slice(0, 10)
+    const day = toDayKey(l.created_at)
     if (!daily[day]) daily[day] = { tokens: 0, cost: 0, count: 0 }
     daily[day].tokens += Number(l.tokens_used) || 0
     daily[day].cost   += Number(l.cost_thb) || 0
