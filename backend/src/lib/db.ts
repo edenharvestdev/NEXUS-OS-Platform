@@ -71,6 +71,22 @@ export async function run(sql: string, params: any[] = []): Promise<void> {
   db.prepare(q.sql).run(...q.params)
 }
 
+/**
+ * Run raw DDL that may contain MULTIPLE statements (no params). Postgres runs
+ * the whole string in one simple query; SQLite uses better-sqlite3's exec()
+ * which handles multiple statements (run()/prepare() handle only one). Used by
+ * the migration runner so a migration can ship several DDL statements at once.
+ */
+export async function execMulti(sql: string): Promise<void> {
+  if (pool) {
+    await pool.query(sql)
+    return
+  }
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { db } = require('./db-sqlite') as { db: any }
+  db.exec(sql)
+}
+
 export function newId(): string {
   return randomUUID()
 }

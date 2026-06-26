@@ -1,6 +1,17 @@
-import { queryAll, queryOne, run } from './db'
+import { queryAll, queryOne, run, execMulti } from './db'
 
-export type Migration = { version: number; name: string; up: string }
+export type Migration = {
+  version: number
+  name: string
+  up: string
+  /** Skip the DDL on SQLite (local dev) but still record as applied — for
+   *  Postgres-only features (triggers, RLS, REVOKE, partial indexes). */
+  pgOnly?: boolean
+  /** If the migration fails, abort the boot (process.exit) instead of the
+   *  default warn-and-continue — for security-critical migrations that must
+   *  not be silently half-applied. */
+  critical?: boolean
+}
 
 /** Versioned migrations — applied once, tracked in schema_migrations */
 export const MIGRATIONS: Migration[] = [
@@ -80,16 +91,27 @@ export async function runMigrations(): Promise<{ applied: number; current: numbe
     }
     const exists = await queryOne('SELECT version FROM schema_migrations WHERE version = $1', [m.version])
     if (exists) continue
+    const isPg = !!process.env.DATABASE_URL
     try {
-      if (m.up) await run(m.up, [])
+      if (m.pgOnly && !isPg) {
+        // Postgres-only migration — skip the DDL on SQLite but record it as
+        // applied so the version isn't retried on every local boot.
+      } else if (m.up) {
+        await execMulti(m.up) // multi-statement safe on both PG and SQLite
+      }
       await run('INSERT INTO schema_migrations (version, name) VALUES ($1,$2)', [m.version, m.name])
       applied++
-      console.log(`✅ Migration v${m.version}: ${m.name}`)
+      console.log(`✅ Migration v${m.version}: ${m.name}${m.pgOnly && !isPg ? ' (skipped on SQLite)' : ''}`)
     } catch (e: any) {
       const msg = String(e?.message || e)
       if (msg.includes('duplicate column') || msg.includes('already exists')) {
         await run('INSERT INTO schema_migrations (version, name) VALUES ($1,$2)', [m.version, m.name])
         applied++
+      } else if (m.critical) {
+        // Security-critical migration must not be silently half-applied —
+        // abort the boot (initialize() will process.exit(1)).
+        console.error(`❌ CRITICAL migration v${m.version} (${m.name}) failed — aborting boot:`, msg)
+        throw e
       } else {
         console.warn(`⚠️ Migration v${m.version} skipped:`, msg)
       }
