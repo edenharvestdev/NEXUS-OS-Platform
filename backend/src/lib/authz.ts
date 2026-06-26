@@ -40,24 +40,48 @@ export function resolveModule(actor: Actor, module: string): AccessDecision {
   return { allowed: false, reason: `role '${r}' NOT in module '${module}' (no super-admin bypass)` }
 }
 
-/** Least-privilege DATA-CLASS access. Key change vs today: RESTRICTED is granted
- *  to NO role by default (incl. admin) — it needs an explicit grant / break-glass
- *  (added in a later PR). HARD is owner/exec/HR only. */
-export function resolveDataClass(actor: Actor, cls: DataClass): AccessDecision {
+/**
+ * Least-privilege DATA-CLASS access (the matrix). RESTRICTED is granted to NO
+ * role by default (incl. admin AND hr) — it needs an ACTIVE break-glass grant
+ * (issuance comes in the break-glass PR; the engine only checks for one here).
+ * HARD is owner/exec/HR only (finance/it dropped vs today's canViewTier).
+ */
+export function resolveDataClass(actor: Actor, cls: DataClass, opts: { breakGlass?: boolean } = {}): AccessDecision {
   const r = normalizeRole(actor.role)
   if (cls === 'BASIC' || cls === 'MEDIUM') return { allowed: true, reason: `${cls} broadly readable` }
   if (cls === 'HARD') {
     return HARD_ROLES.includes(r)
-      ? { allowed: true, reason: `role '${r}' may read HARD` }
-      : { allowed: false, reason: `role '${r}' may not read HARD` }
+      ? { allowed: true, reason: `role '${r}' may read HARD (owner/exec/HR)` }
+      : { allowed: false, reason: `role '${r}' may not read HARD (owner/exec/HR only)` }
   }
-  return { allowed: false, reason: `RESTRICTED requires explicit grant (role '${r}' has none)` }
+  // RESTRICTED — break-glass only, for EVERY role including admin.
+  if (opts.breakGlass) return { allowed: true, reason: 'RESTRICTED via active break-glass grant' }
+  return { allowed: false, reason: `RESTRICTED requires an active break-glass grant (role '${r}' has none)` }
+}
+
+/** Explicit DATA policy matrix — the documented source of truth. */
+export const DATA_CLASS_POLICY: Record<DataClass, { roles: string[] | '*'; note: string }> = {
+  BASIC: { roles: '*', note: 'every authenticated user in the company' },
+  MEDIUM: { roles: '*', note: 'every user (row-level dept/branch scoping added later)' },
+  HARD: { roles: HARD_ROLES, note: 'data owner + manager + HR + exec' },
+  RESTRICTED: { roles: [], note: 'NO role by default — active break-glass grant only (incl. admin & hr)' },
+}
+
+/** Explicit module scope for a role = the modules it is listed for. This is the
+ *  least-privilege REPLACEMENT for the admin "*" wildcard: under enforcement
+ *  admin would get THIS set, not everything. */
+export function roleModuleScope(role: string): string[] {
+  const r = normalizeRole(role)
+  return Object.keys(MODULE_ACCESS).filter(m => (MODULE_ACCESS[m] as string[]).includes(r)).sort()
 }
 
 /** "Would allow / would deny" probe (diagnostics / future enforce). */
-export function wouldAccess(actor: Actor, target: { module?: string; dataClass?: DataClass }): AccessDecision {
+export function wouldAccess(
+  actor: Actor,
+  target: { module?: string; dataClass?: DataClass; breakGlass?: boolean },
+): AccessDecision {
   if (target.module) return resolveModule(actor, target.module)
-  if (target.dataClass) return resolveDataClass(actor, target.dataClass)
+  if (target.dataClass) return resolveDataClass(actor, target.dataClass, { breakGlass: target.breakGlass })
   return { allowed: false, reason: 'no target specified' }
 }
 

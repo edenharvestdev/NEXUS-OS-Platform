@@ -1,13 +1,20 @@
 import { queryAll, queryOne } from './db'
 import { MODULE_ACCESS, normalizeRole } from './rbac'
-import { shadowCheck } from './authz'
+import { shadowCheck, roleModuleScope } from './authz'
 
 /** Effective modules = role defaults ∪ permission group modules */
 export async function getUserModules(userId: string, role?: string): Promise<Set<string>> {
   const r = normalizeRole(role)
   if (r === 'admin') {
-    // Super-admin bypass #3 — admin gets the '*' wildcard module set.
-    shadowCheck('getUserModules:wildcard', true, { allowed: false, reason: 'admin wildcard "*" (no scoped module set under least-privilege)' })
+    // Super-admin bypass #3 — admin gets the '*' wildcard. Least-privilege
+    // replacement = the explicit scoped set (roleModuleScope), reported in shadow.
+    const scoped = roleModuleScope('admin')
+    shadowCheck(
+      'getUserModules:wildcard',
+      true,
+      { allowed: false, reason: `admin '*' wildcard; least-privilege scope = ${scoped.length} explicit modules` },
+      { scoped_module_count: scoped.length },
+    )
     return new Set(['*'])
   }
 

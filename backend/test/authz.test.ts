@@ -1,8 +1,34 @@
 import { test } from 'node:test'
 import assert from 'node:assert'
-import { resolveModule, resolveDataClass, tierToClass, shadowCheck } from '../src/lib/authz'
+import { resolveModule, resolveDataClass, tierToClass, shadowCheck, roleModuleScope, DATA_CLASS_POLICY } from '../src/lib/authz'
 import { canAccessModule } from '../src/lib/rbac'
 import { canViewTier } from '../src/lib/encryption'
+
+test('AUTHZ-2: RESTRICTED is break-glass only (incl admin & hr)', () => {
+  assert.equal(resolveDataClass({ role: 'admin' }, 'RESTRICTED').allowed, false)
+  assert.equal(resolveDataClass({ role: 'hr' }, 'RESTRICTED').allowed, false)
+  // an active break-glass grant unlocks it
+  assert.equal(resolveDataClass({ role: 'admin' }, 'RESTRICTED', { breakGlass: true }).allowed, true)
+})
+
+test('AUTHZ-2: HARD = owner/exec/HR only (finance/it dropped)', () => {
+  for (const role of ['admin', 'ceo', 'hr']) assert.equal(resolveDataClass({ role }, 'HARD').allowed, true)
+  for (const role of ['finance', 'it', 'staff', 'medical']) assert.equal(resolveDataClass({ role }, 'HARD').allowed, false)
+})
+
+test('AUTHZ-2: roleModuleScope replaces admin wildcard with an explicit set', () => {
+  const scoped = roleModuleScope('admin')
+  assert.ok(Array.isArray(scoped) && scoped.length > 5)   // a concrete list, not '*'
+  assert.ok(scoped.includes('settings'))                   // admin IS listed for settings
+  assert.ok(!scoped.includes('staff'))                     // admin is NOT in staff module
+  assert.deepEqual([...scoped].sort(), scoped)             // sorted/stable
+})
+
+test('AUTHZ-2: DATA_CLASS_POLICY matrix is the documented source of truth', () => {
+  assert.equal(DATA_CLASS_POLICY.RESTRICTED.roles.length, 0) // no role by default
+  assert.deepEqual(DATA_CLASS_POLICY.HARD.roles, ['admin', 'ceo', 'hr'])
+  assert.equal(DATA_CLASS_POLICY.BASIC.roles, '*')
+})
 
 test('least-privilege module access — no super-admin bypass', () => {
   assert.equal(resolveModule({ role: 'admin' }, 'settings').allowed, true)  // admin IS listed for settings
