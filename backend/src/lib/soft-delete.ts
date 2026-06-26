@@ -95,10 +95,11 @@ export async function softDelete(resource: string, id: string, actor: SoftDelete
 
   const ts = nowIso()
   const source = opts.source === 'system' ? 'system' : 'user'
-  await run(
+  const changed = await run(
     `UPDATE ${d.table} SET deleted_at=$1, deleted_by=$2, delete_reason=$3, delete_source=$4 WHERE id=$5 AND company_id=$6 AND deleted_at IS NULL`,
     [ts, actor.id, opts.reason || null, source, id, actor.companyId],
   )
+  if (changed === 0) return { ok: false, reason: 'already_deleted' } // lost the race — do NOT audit a no-op
   // Audit MUST accompany the mutation. No cross-DB transaction helper exists, so
   // if the (strict) audit write fails we revert the mutation and rethrow — the
   // async-guard turns the throw into a 500. Net: never a mutation without audit.
@@ -126,10 +127,11 @@ export async function restore(resource: string, id: string, actor: SoftDeleteAct
 
   const ts = nowIso()
   const prevDeletedAt = row.deleted_at // for revert if the audit write fails
-  await run(
+  const changed = await run(
     `UPDATE ${d.table} SET deleted_at=NULL, restored_at=$1, restored_by=$2, restore_reason=$3 WHERE id=$4 AND company_id=$5 AND deleted_at IS NOT NULL`,
     [ts, actor.id, opts.reason || null, id, actor.companyId],
   )
+  if (changed === 0) return { ok: false, reason: 'not_deleted' } // lost the race — do NOT audit a no-op
   // Atomicity: revert to the deleted state if the strict audit write fails.
   try {
     await writeAuditStrict({
