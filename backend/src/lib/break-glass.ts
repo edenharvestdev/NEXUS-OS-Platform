@@ -37,8 +37,10 @@ export type BreakGlassResult = {
 
 async function notify(companyId: string | undefined, kind: string, meta: Record<string, unknown>): Promise<void> {
   if (!companyId) return
+  // Alert exactly the break-glass approvers (ROLE-1: owner/ceo/admin/it_security)
+  // so the people who can act on a pending grant are the ones notified.
   const recipients = await queryAll(
-    `SELECT id FROM users WHERE company_id = $1 AND role IN ('ceo','admin','it') AND status = 'active' LIMIT 10`,
+    `SELECT id FROM users WHERE company_id = $1 AND role IN ('owner','ceo','admin','it_security') AND status = 'active' LIMIT 10`,
     [companyId],
   ).catch(() => [])
   for (const r of recipients) {
