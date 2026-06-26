@@ -1,9 +1,10 @@
 import { Request, Response } from 'express'
 import { queryAll, queryOne, run, newId } from '../lib/db'
+import { softDelete, softDeleteEnabled, softDeleteHttpStatus } from '../lib/soft-delete'
 
 export async function getAll(req: Request, res: Response): Promise<void> {
   const data = await queryAll(
-    'SELECT * FROM deals WHERE company_id = $1 ORDER BY created_at DESC',
+    'SELECT * FROM deals WHERE company_id = $1 AND deleted_at IS NULL ORDER BY created_at DESC',
     [req.user.company_id]
   )
   res.json({ data })
@@ -20,7 +21,7 @@ export async function create(req: Request, res: Response): Promise<void> {
      Number(value)||0, stage||'ติดต่อ', Number(probability)||50,
      contact||'', email||'', phone||'', notes||'']
   )
-  const data = await queryOne('SELECT * FROM deals WHERE id = $1', [id])
+  const data = await queryOne('SELECT * FROM deals WHERE id = $1 AND deleted_at IS NULL', [id])
   res.json({ data })
 }
 
@@ -36,13 +37,18 @@ export async function update(req: Request, res: Response): Promise<void> {
   updates.push(`updated_at = $${i++}`)
   vals.push(new Date().toISOString())
   vals.push(id, req.user.company_id)
-  await run(`UPDATE deals SET ${updates.join(', ')} WHERE id = $${i++} AND company_id = $${i}`, vals)
-  const data = await queryOne('SELECT * FROM deals WHERE id = $1', [id])
+  await run(`UPDATE deals SET ${updates.join(', ')} WHERE id = $${i++} AND company_id = $${i} AND deleted_at IS NULL`, vals)
+  const data = await queryOne('SELECT * FROM deals WHERE id = $1 AND deleted_at IS NULL', [id])
   res.json({ data })
 }
 
 export async function remove(req: Request, res: Response): Promise<void> {
   const { id } = req.params
+  if (softDeleteEnabled()) {
+    const r = await softDelete('deals', String(id), { id: req.user.id, role: req.user.role, companyId: req.user.company_id }, { source: 'user', reason: String(req.body?.reason || '') })
+    if (!r.ok) { res.status(softDeleteHttpStatus(r.reason)).json({ error: r.reason }); return }
+    res.json({ success: true, soft_deleted: true }); return
+  }
   await run('DELETE FROM deals WHERE id = $1 AND company_id = $2', [id, req.user.company_id])
   res.json({ success: true })
 }
@@ -50,7 +56,7 @@ export async function remove(req: Request, res: Response): Promise<void> {
 // ── POST /api/deals/:id/analyze ──────────────────────────────────
 export async function analyzeLead(req: Request, res: Response): Promise<void> {
   const { id } = req.params
-  const deal = await queryOne('SELECT * FROM deals WHERE id = $1 AND company_id = $2', [id, req.user.company_id])
+  const deal = await queryOne('SELECT * FROM deals WHERE id = $1 AND company_id = $2 AND deleted_at IS NULL', [id, req.user.company_id])
   if (!deal) { res.status(404).json({ error: 'ไม่พบข้อมูลดีล' }); return }
 
   const prompt = `คุณคือผู้เชี่ยวชาญด้านการขาย (Sales Strategist)

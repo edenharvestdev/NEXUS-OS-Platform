@@ -16,7 +16,7 @@ export async function getReadiness(req: Request, res: Response): Promise<void> {
      FROM transactions WHERE company_id = $1`,
     [cid],
   )
-  const customer = await queryOne(`SELECT AVG(probability) as avg_prob FROM deals WHERE company_id = $1`, [cid])
+  const customer = await queryOne(`SELECT AVG(probability) as avg_prob FROM deals WHERE company_id = $1 AND deleted_at IS NULL`, [cid])
 
   const num = (v: unknown) => (typeof v === 'number' ? v : parseFloat(String(v ?? 0)) || 0)
   const clamp = (n: number) => Math.max(0, Math.min(100, n))

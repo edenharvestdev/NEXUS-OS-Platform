@@ -28,7 +28,7 @@ export async function getHealthScore(req: Request, res: Response): Promise<void>
   ) || { income: 0, expense: 0 }
 
   const customer = await queryOne(
-    `SELECT COUNT(*) as deals, AVG(probability) as avg_prob FROM deals WHERE company_id = $1`,
+    `SELECT COUNT(*) as deals, AVG(probability) as avg_prob FROM deals WHERE company_id = $1 AND deleted_at IS NULL`,
     [cid],
   ) || { deals: 0, avg_prob: 0 }
 
@@ -67,7 +67,7 @@ export async function getHealthScore(req: Request, res: Response): Promise<void>
 export async function simulateFeasibility(req: Request, res: Response): Promise<void> {
   const { scenario = 'new_branch', investment = 500000, monthly_revenue = 800000 } = req.body || {}
   const health = await queryOne(
-    `SELECT AVG(probability) as avg_prob FROM deals WHERE company_id = $1`,
+    `SELECT AVG(probability) as avg_prob FROM deals WHERE company_id = $1 AND deleted_at IS NULL`,
     [req.user.company_id],
   )
   const base = num(health?.avg_prob) || 55

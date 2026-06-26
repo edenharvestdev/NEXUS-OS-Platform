@@ -1,8 +1,9 @@
 import { Request, Response } from 'express'
 import { queryAll, queryOne, run, newId } from '../lib/db'
+import { softDelete, softDeleteEnabled, softDeleteHttpStatus } from '../lib/soft-delete'
 
 export async function getAll(req: Request, res: Response): Promise<void> {
-  const data = await queryAll('SELECT * FROM campaigns WHERE company_id = $1 ORDER BY created_at DESC', [req.user.company_id])
+  const data = await queryAll('SELECT * FROM campaigns WHERE company_id = $1 AND deleted_at IS NULL ORDER BY created_at DESC', [req.user.company_id])
   res.json({ data })
 }
 
@@ -17,7 +18,7 @@ export async function create(req: Request, res: Response): Promise<void> {
      Number(budget)||0, Number(spent)||0, Number(reach)||0, Number(clicks)||0,
      Number(conversions)||0, status||'active']
   )
-  const data = await queryOne('SELECT * FROM campaigns WHERE id = $1', [id])
+  const data = await queryOne('SELECT * FROM campaigns WHERE id = $1 AND deleted_at IS NULL', [id])
   res.json({ data })
 }
 
@@ -32,13 +33,18 @@ export async function update(req: Request, res: Response): Promise<void> {
   }
   if (!updates.length) { res.status(400).json({ error: 'No fields' }); return }
   vals.push(id, req.user.company_id)
-  await run(`UPDATE campaigns SET ${updates.join(', ')} WHERE id = $${i++} AND company_id = $${i}`, vals)
-  const data = await queryOne('SELECT * FROM campaigns WHERE id = $1', [id])
+  await run(`UPDATE campaigns SET ${updates.join(', ')} WHERE id = $${i++} AND company_id = $${i} AND deleted_at IS NULL`, vals)
+  const data = await queryOne('SELECT * FROM campaigns WHERE id = $1 AND deleted_at IS NULL', [id])
   res.json({ data })
 }
 
 export async function remove(req: Request, res: Response): Promise<void> {
   const { id } = req.params
+  if (softDeleteEnabled()) {
+    const r = await softDelete('campaigns', String(id), { id: req.user.id, role: req.user.role, companyId: req.user.company_id }, { source: 'user', reason: String(req.body?.reason || '') })
+    if (!r.ok) { res.status(softDeleteHttpStatus(r.reason)).json({ error: r.reason }); return }
+    res.json({ success: true, soft_deleted: true }); return
+  }
   await run('DELETE FROM campaigns WHERE id = $1 AND company_id = $2', [id, req.user.company_id])
   res.json({ success: true })
 }
@@ -46,7 +52,7 @@ export async function remove(req: Request, res: Response): Promise<void> {
 // ── POST /api/campaigns/:id/analyze ──────────────────────────────
 export async function analyzeCampaign(req: Request, res: Response): Promise<void> {
   const { id } = req.params
-  const camp = await queryOne('SELECT * FROM campaigns WHERE id = $1 AND company_id = $2', [id, req.user.company_id])
+  const camp = await queryOne('SELECT * FROM campaigns WHERE id = $1 AND company_id = $2 AND deleted_at IS NULL', [id, req.user.company_id])
   if (!camp) { res.status(404).json({ error: 'ไม่พบข้อมูลแคมเปญ' }); return }
 
   const prompt = `คุณคือผู้เชี่ยวชาญด้านการตลาดดิจิทัล (Digital Marketing Expert)

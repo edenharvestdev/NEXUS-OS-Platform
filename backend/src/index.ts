@@ -45,6 +45,7 @@ import opsRoutes             from './routes/ops.route'
 import tamadaRoutes          from './routes/tamada.route'
 import hrRoutes              from './routes/hr.route'
 import securityRoutes        from './routes/security.route'
+import softDeleteRoutes      from './routes/soft-delete.route'
 import { rateLimitMiddleware } from './middleware/rate-limit'
 import { requestMetricsMiddleware } from './middleware/request-metrics'
 import { requestContextMiddleware } from './middleware/request-context'
@@ -90,6 +91,7 @@ app.get('/health/deep', deepHealth)
 // ── API Routes ───────────────────────────────────────────────────
 app.use('/api/auth',         authRoutes)
 app.use('/api/security',     securityRoutes)
+app.use('/api/admin/soft-delete', softDeleteRoutes)
 app.use('/api/employees',    employeesRoutes)
 app.use('/api/transactions', transactionsRoutes)
 app.use('/api/deals',        dealsRoutes)

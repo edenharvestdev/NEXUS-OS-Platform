@@ -28,7 +28,7 @@ export async function searchMemory(companyId: string, q: string, limit = 20) {
 
   const documents = await queryAll(
     `SELECT 'document' as source, id, name as title, COALESCE(summary, name) as content, 'Knowledge' as layer, created_at
-     FROM documents WHERE company_id = $1 AND (name LIKE $2 OR summary LIKE $2)
+     FROM documents WHERE company_id = $1 AND deleted_at IS NULL AND (name LIKE $2 OR summary LIKE $2)
      LIMIT $3`,
     [companyId, term, limit],
   )
