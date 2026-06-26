@@ -46,6 +46,7 @@ import tamadaRoutes          from './routes/tamada.route'
 import hrRoutes              from './routes/hr.route'
 import { rateLimitMiddleware } from './middleware/rate-limit'
 import { requestMetricsMiddleware } from './middleware/request-metrics'
+import { requestContextMiddleware } from './middleware/request-context'
 import { deepHealth } from './controllers/deep-health.controller'
 
 const app = express()
@@ -57,6 +58,7 @@ app.use(helmet({
 app.use(corsMiddleware)
 app.use(rateLimitMiddleware)
 app.use(requestMetricsMiddleware)
+app.use(requestContextMiddleware) // establishes per-request AsyncLocalStorage context (for audit)
 // Increase limit to 50MB to support base64-encoded images/PDFs for OCR
 app.use(express.json({ limit: '50mb' }))
 app.use(express.urlencoded({ extended: true, limit: '50mb' }))
