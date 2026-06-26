@@ -5,7 +5,7 @@ import { MFA_STEPUP_DDL } from '../src/lib/nexus-mfa-schema'
 import { BREAK_GLASS_DDL } from '../src/lib/nexus-breakglass-schema'
 import { enrollMfa, confirmMfa, issueStepUp } from '../src/lib/mfa'
 import { totp } from '../src/lib/totp'
-import { requestBreakGlass, approveBreakGlass, denyBreakGlass, revokeBreakGlass, hasActiveBreakGlass } from '../src/lib/break-glass'
+import { requestBreakGlass, approveBreakGlass, denyBreakGlass, revokeBreakGlass, hasActiveBreakGlass, expireStaleGrants, listBreakGlass } from '../src/lib/break-glass'
 import { resolveDataClass } from '../src/lib/authz'
 
 async function freshStepUp(userId: string): Promise<string> {
@@ -82,13 +82,16 @@ test('BG: revoke ends an active grant', async () => {
   assert.equal(await hasActiveBreakGlass('bg-3'), false)
 })
 
-test('BG: an expired grant does not count as active', async () => {
+test('BG: a past-expiry grant flips to expired (audited) and is not active', async () => {
   await run(
     `INSERT INTO break_glass_grants (id, company_id, user_id, data_class, scope, reason, duration_min, status, created_at, activated_at, expires_at)
      VALUES ($1,$2,$3,'RESTRICTED','*','old',5,'active',$4,$4,$5)`,
     [newId(), 'co1', 'bg-4', '2000-01-01T00:00:00.000Z', '2000-01-01T00:05:00.000Z'],
   )
-  assert.equal(await hasActiveBreakGlass('bg-4'), false)
+  assert.equal(await hasActiveBreakGlass('bg-4'), false)        // expires_at filter
+  assert.ok((await expireStaleGrants('co1')) >= 1)             // flips + audits the stale grant
+  const expired = await listBreakGlass('co1', { status: 'expired' })
+  assert.ok(expired.some((g) => g.user_id === 'bg-4' && g.status === 'expired'))
 })
 
 test('BG is dark: an active grant does NOT change the resolveDataClass decision', async () => {

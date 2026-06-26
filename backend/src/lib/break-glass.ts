@@ -172,10 +172,31 @@ export async function hasActiveBreakGlass(userId: string, dataClass = 'RESTRICTE
   return !!row
 }
 
-/** List grants for a company (for approvers / the shadow report). Flips
- *  past-expiry 'active' rows to 'expired' first so the view is accurate. */
+/** Lazily flip past-expiry 'active' grants to 'expired' for a company, writing a
+ *  T3 audit per grant so the lifecycle (request→active→EXPIRE) is fully recorded.
+ *  SELECT-then-UPDATE-then-audit: only the rows that actually expire are logged,
+ *  and once 'expired' they never match again (idempotent — audited exactly once). */
+export async function expireStaleGrants(companyId: string): Promise<number> {
+  const now = nowIso()
+  const stale = await queryAll(
+    `SELECT id, user_id, data_class, expires_at FROM break_glass_grants WHERE company_id=$1 AND status='active' AND expires_at <= $2`,
+    [companyId, now],
+  )
+  if (!stale.length) return 0
+  await run(`UPDATE break_glass_grants SET status='expired' WHERE company_id=$1 AND status='active' AND expires_at <= $2`, [companyId, now])
+  for (const g of stale) {
+    await writeAuditStrict({
+      companyId, userId: g.user_id, action: 'breakglass.expire', resource: 'break_glass_grants', resourceId: g.id,
+      securityTier: 'T3', meta: { for_user: g.user_id, data_class: g.data_class, expires_at: g.expires_at, auto: true },
+    }).catch(() => { /* expiry audit is best-effort */ })
+  }
+  return stale.length
+}
+
+/** List grants for a company (for approvers / the shadow report). Expires stale
+ *  grants first so the view is accurate. */
 export async function listBreakGlass(companyId: string, opts: { status?: string; limit?: number } = {}): Promise<any[]> {
-  await run(`UPDATE break_glass_grants SET status='expired' WHERE company_id=$1 AND status='active' AND expires_at <= $2`, [companyId, nowIso()])
+  await expireStaleGrants(companyId)
   const limit = Math.min(opts.limit || 100, 500)
   if (opts.status) {
     return queryAll(`SELECT * FROM break_glass_grants WHERE company_id=$1 AND status=$2 ORDER BY created_at DESC LIMIT $3`, [companyId, opts.status, limit])
