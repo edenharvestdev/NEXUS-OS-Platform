@@ -4,6 +4,8 @@
  */
 import { GoogleGenerativeAI, Part } from '@google/generative-ai'
 import { parseGeminiJSON } from './gemini-parse'
+import { redactForProvider } from './ai-redaction'
+import { logAiQuery, promptHash } from './ai-query-log'
 
 export type AIProvider = 'openai' | 'claude' | 'gemini' | 'typhoon'
 
@@ -225,17 +227,44 @@ export async function askWithFallback(prompt: string, options: AICallOptions = {
   const chain = buildChain(options.prefer, !!(options.imageBase64 && options.mimeType))
   if (!chain.length) throw new Error('ไม่มี AI provider ที่พร้อมใช้งาน')
 
+  // AIEG-1 egress floor. mode: 'off' (no redaction/log) | 'shadow' (log what
+  // WOULD be masked, send raw — DEFAULT, no behavior change) | 'enforce' (send
+  // the masked prompt). RESTRICTED-class exclusion is the broker (AIEG-2); this
+  // is the content-level last line so IDs/salary never leave once enforced.
+  const mode = (process.env.AI_REDACTION || 'shadow').toLowerCase()
+  const red = mode === 'off' ? { text: prompt, count: 0, hits: {} } : redactForProvider(prompt)
+  const outbound = mode === 'enforce' ? red.text : prompt
+
   const errors: string[] = []
+  let result: AIResult | null = null
   for (const provider of chain) {
     try {
-      return await callProvider(provider, prompt, options)
+      result = await callProvider(provider, outbound, options)
+      break
     } catch (e: any) {
       const msg = `${provider}: ${e?.message || e}`
       errors.push(msg)
       console.warn('[AI fallback]', msg)
     }
   }
-  throw new Error(`AI ทุก provider ล้มเหลว — ${errors.slice(0, 2).join(' | ')}`)
+
+  if (mode !== 'off') {
+    await logAiQuery({
+      provider: result?.provider,
+      model: result?.model,
+      redactionMode: mode,
+      redactionCount: red.count,
+      redactionHits: red.hits,
+      restrictedAttempt: red.count > 0,
+      blocked: !result,
+      promptChars: prompt.length,
+      promptHash: promptHash(prompt),
+      responseSummary: result?.text ? result.text.slice(0, 200) : undefined,
+    })
+  }
+
+  if (!result) throw new Error(`AI ทุก provider ล้มเหลว — ${errors.slice(0, 2).join(' | ')}`)
+  return result
 }
 
 export async function askAIText(prompt: string, options?: AICallOptions): Promise<AIResult> {
