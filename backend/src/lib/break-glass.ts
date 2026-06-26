@@ -121,10 +121,11 @@ export async function approveBreakGlass(grantId: string, approver: { id: string;
   const now = nowIso()
   const expiresAt = plusMinutesIso(g.duration_min)
   // status='pending' guard makes a concurrent double-approve a no-op (only one wins).
-  await run(
+  const changed = await run(
     `UPDATE break_glass_grants SET status='active', approved_by=$1, activated_at=$2, expires_at=$3, decided_at=$4, decided_by=$5 WHERE id=$6 AND status='pending'`,
     [approver.id, now, expiresAt, now, approver.id, grantId],
   )
+  if (changed === 0) return { ok: false, reason: 'not_pending' } // lost the race — do NOT audit a no-op
   await writeAuditStrict({
     companyId: g.company_id, userId: approver.id, action: 'breakglass.approve', resource: 'break_glass_grants', resourceId: grantId,
     securityTier: 'T3', meta: { for_user: g.user_id, data_class: g.data_class, expires_at: expiresAt },
@@ -141,7 +142,8 @@ export async function denyBreakGlass(grantId: string, approver: { id: string; ro
   if (g.status !== 'pending') return { ok: false, reason: 'not_pending' }
   if (!APPROVER_ROLES.includes(normalizeRole(approver.role))) return { ok: false, reason: 'not_authorized' }
   const now = nowIso()
-  await run(`UPDATE break_glass_grants SET status='denied', decided_at=$1, decided_by=$2 WHERE id=$3 AND status='pending'`, [now, approver.id, grantId])
+  const changed = await run(`UPDATE break_glass_grants SET status='denied', decided_at=$1, decided_by=$2 WHERE id=$3 AND status='pending'`, [now, approver.id, grantId])
+  if (changed === 0) return { ok: false, reason: 'not_pending' } // lost the race — do NOT audit a no-op
   await writeAuditStrict({
     companyId: g.company_id, userId: approver.id, action: 'breakglass.deny', resource: 'break_glass_grants', resourceId: grantId,
     securityTier: 'T3', meta: { for_user: g.user_id },
@@ -158,7 +160,8 @@ export async function revokeBreakGlass(grantId: string, by: { id: string; role?:
   const isOwner = g.user_id === by.id
   if (!isOwner && !APPROVER_ROLES.includes(normalizeRole(by.role))) return { ok: false, reason: 'not_authorized' }
   const now = nowIso()
-  await run(`UPDATE break_glass_grants SET status='revoked', decided_at=$1, decided_by=$2 WHERE id=$3 AND status IN ('active','pending')`, [now, by.id, grantId])
+  const changed = await run(`UPDATE break_glass_grants SET status='revoked', decided_at=$1, decided_by=$2 WHERE id=$3 AND status IN ('active','pending')`, [now, by.id, grantId])
+  if (changed === 0) return { ok: false, reason: 'not_revocable' } // lost the race — do NOT audit a no-op
   await writeAuditStrict({
     companyId: g.company_id, userId: by.id, action: 'breakglass.revoke', resource: 'break_glass_grants', resourceId: grantId,
     securityTier: 'T3', meta: { for_user: g.user_id },

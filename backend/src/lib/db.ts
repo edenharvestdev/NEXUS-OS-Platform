@@ -60,15 +60,19 @@ export async function queryOne(sql: string, params: any[] = []): Promise<any | n
   return rows[0] ?? null
 }
 
-export async function run(sql: string, params: any[] = []): Promise<void> {
+/** Execute a write. Returns the number of rows affected (pg rowCount /
+ *  better-sqlite3 changes) so callers can detect a lost-race / no-op UPDATE and
+ *  avoid auditing a mutation that did not happen. Ignoring the return is safe. */
+export async function run(sql: string, params: any[] = []): Promise<number> {
   if (pool) {
-    await pool.query(sql, params)
-    return
+    const res = await pool.query(sql, params)
+    return res.rowCount ?? 0
   }
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { db } = require('./db-sqlite') as { db: any }
   const q = toSQLite(sql, params)
-  db.prepare(q.sql).run(...q.params)
+  const info = db.prepare(q.sql).run(...q.params)
+  return info.changes ?? 0
 }
 
 /**
@@ -84,7 +88,13 @@ export async function execMulti(sql: string): Promise<void> {
   }
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { db } = require('./db-sqlite') as { db: any }
-  db.exec(sql)
+  // PRAGMAs (e.g. foreign_keys) are no-ops inside a transaction, so run them raw.
+  if (/\bPRAGMA\b/i.test(sql)) { db.exec(sql); return }
+  // Atomic on SQLite too — Postgres already runs a multi-statement string in one
+  // transaction; without this, a crash partway through a multi-ALTER migration
+  // (e.g. v16's 21 ADD COLUMNs) could leave some columns applied and the version
+  // unrecorded, then the duplicate-column catch could permanently skip the rest.
+  db.transaction(() => db.exec(sql))()
 }
 
 export function newId(): string {
