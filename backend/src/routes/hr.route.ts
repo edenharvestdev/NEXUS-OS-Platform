@@ -4,6 +4,7 @@ import * as p5 from '../controllers/hr-phase5.controller'
 import * as p6 from '../controllers/hr-phase6.controller'
 import { authMiddleware } from '../middleware/auth'
 import { requireModule, requireRole } from '../middleware/rbac'
+import { requireStepUp } from '../middleware/step-up'
 
 const r = Router()
 r.use(authMiddleware)
@@ -38,7 +39,7 @@ r.delete('/attendance/locations/:id', requireRole('admin', 'hr', 'it'), p6.delet
 r.get('/advances', requireModule('advances'), c.listAdvances)
 r.post('/advances', requireModule('advances'), c.createAdvance)
 r.patch('/advances/:id', requireRole('admin', 'hr', 'finance'), c.reviewAdvance)
-r.post('/salary-change', requireRole('admin', 'hr'), c.recordSalaryChange)
+r.post('/salary-change', requireRole('admin', 'hr'), requireStepUp('RESTRICTED'), c.recordSalaryChange)
 
 // Leave workflow config + quotas
 r.get('/leave-approval-config', requireRole('admin', 'hr'), p6.getLeaveApprovalConfig)
@@ -51,7 +52,7 @@ r.get('/payroll/settings', requireModule('reports'), c.getPayrollSettings)
 r.patch('/payroll/settings', requireRole('admin', 'hr', 'finance'), c.updatePayrollSettings)
 r.get('/payroll/periods', requireModule('reports'), c.listPeriods)
 r.post('/payroll/periods', requireRole('admin', 'hr', 'finance'), c.createPeriod)
-r.get('/payroll/periods/:id', requireModule('reports'), c.getPeriodDashboard)
+r.get('/payroll/periods/:id', requireModule('reports'), requireStepUp('RESTRICTED'), c.getPeriodDashboard)
 r.post('/payroll/periods/:id/calendar', requireRole('admin', 'hr', 'finance'), c.buildCalendar)
 r.post('/payroll/periods/:id/calculate', requireRole('admin', 'hr', 'finance'), c.calculatePeriod)
 r.post('/payroll/periods/:id/finish', requireRole('admin', 'hr', 'finance'), c.finishPeriod)
