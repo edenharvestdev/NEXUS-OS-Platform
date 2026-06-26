@@ -2,6 +2,7 @@ import { queryAll, queryOne, run, execMulti } from './db'
 import { AUDIT_LOGS_DDL, AUDIT_LOGS_APPENDONLY_DDL, AI_QUERY_LOGS_DDL } from './nexus-audit-schema'
 import { MFA_STEPUP_DDL } from './nexus-mfa-schema'
 import { BREAK_GLASS_DDL } from './nexus-breakglass-schema'
+import { SOFT_DELETE_DDL } from './nexus-softdelete-schema'
 
 export type Migration = {
   version: number
@@ -105,6 +106,11 @@ export const MIGRATIONS: Migration[] = [
     version: 15,
     name: 'break_glass_grants',
     up: BREAK_GLASS_DDL, // BG-1 break-glass grants (PG + SQLite)
+  },
+  {
+    version: 16,
+    name: 'soft_delete_columns',
+    up: SOFT_DELETE_DDL, // Soft Delete v1 columns on documents/deals/campaigns (PG + SQLite)
   },
 ]
 

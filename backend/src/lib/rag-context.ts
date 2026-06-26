@@ -32,7 +32,7 @@ export async function buildOrgContext(companyId: string, viewerRole: string, vie
 
   if (canViewTier(viewerRole, 'T1')) {
     const docs = await queryAll(
-      'SELECT name, summary, risk_level FROM documents WHERE company_id = $1 ORDER BY created_at DESC LIMIT 5',
+      'SELECT name, summary, risk_level FROM documents WHERE company_id = $1 AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 5',
       [companyId],
     )
     for (const d of docs) {
