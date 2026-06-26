@@ -11,8 +11,11 @@ export const ROLES = [
 ] as const
 export type Role = typeof ROLES[number]
 
-// Every role — for company-wide features available to all staff.
-const ALL: Role[] = [...ROLES]
+// Every role — for company-wide features available to all staff. FROZEN: many
+// modules below share this one array by reference, so an accidental in-place
+// push (e.g. a future MODULE_ACCESS augmentation) would silently fan out to all
+// of them — freezing turns that into a loud throw at boot instead.
+const ALL: Role[] = Object.freeze([...ROLES]) as Role[]
 
 export const MODULE_ACCESS: Record<string, Role[]> = {
   home:          ALL,
