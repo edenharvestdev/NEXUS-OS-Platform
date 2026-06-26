@@ -202,6 +202,21 @@ export const api = {
   // ── AI Stats ─────────────────────────────────────────────────
   getAIStats: () => request<{ data: any }>('/api/ai-stats'),
 
+  // ── Security: MFA / step-up / break-glass ────────────────────
+  mfaStatus: () => request<{ enrolled: boolean; enabled: boolean }>('/api/security/mfa/status'),
+  mfaEnroll: () => request<{ otpauthUri: string; secret: string }>('/api/security/mfa/enroll', { method: 'POST' }),
+  mfaConfirm: (code: string) =>
+    request<{ ok: boolean }>('/api/security/mfa/confirm', { method: 'POST', body: JSON.stringify({ code }) }),
+  mfaStepUp: (code: string) =>
+    request<{ stepUpToken: string; expiresIn: number }>('/api/security/mfa/step-up', { method: 'POST', body: JSON.stringify({ code }) }),
+  breakGlassList: (status?: string) =>
+    request<any[]>(`/api/security/break-glass${status ? `?status=${status}` : ''}`),
+  breakGlassRequest: (body: { dataClass?: string; scope?: string; reason: string; durationMin: number }, stepUpToken: string) =>
+    request('/api/security/break-glass/request', { method: 'POST', headers: { 'X-Step-Up': stepUpToken }, body: JSON.stringify(body) }),
+  breakGlassApprove: (id: string) => request(`/api/security/break-glass/${id}/approve`, { method: 'POST' }),
+  breakGlassDeny: (id: string) => request(`/api/security/break-glass/${id}/deny`, { method: 'POST' }),
+  breakGlassRevoke: (id: string) => request(`/api/security/break-glass/${id}/revoke`, { method: 'POST' }),
+
   // ── Settings ─────────────────────────────────────────────────
   getSettings: () => request<{ company: any; profile: any; settings: any }>('/api/settings'),
   updateCompany: (data: any) =>
