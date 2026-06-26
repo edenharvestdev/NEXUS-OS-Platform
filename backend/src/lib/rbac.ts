@@ -65,7 +65,13 @@ export function normalizeRole(role?: string): string {
 
 export function canAccessModule(role: string | undefined, module: string): boolean {
   const r = normalizeRole(role)
-  if (r === 'admin') return true
+  if (r === 'admin') {
+    // Super-admin bypass #1 — observe (shadow) where least-privilege would deny.
+    // Lazy-require to avoid the rbac ⇄ authz load-time cycle.
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    try { const a = require('./authz'); a.shadowCheck(`canAccessModule:${module}`, true, a.resolveModule({ role: r }, module)) } catch { /* shadow only */ }
+    return true
+  }
   const allowed = MODULE_ACCESS[module]
   return allowed ? allowed.includes(r as Role) : false
 }
