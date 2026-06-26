@@ -74,7 +74,7 @@ export async function ocrReceipt(req: Request, res: Response): Promise<void> {
 
   try {
     const { askAIVisionJSON } = await import('../lib/ai-providers')
-    const result = await askAIVisionJSON(prompt, fileBase64, fileMime || 'image/jpeg', { prefer: ['openai', 'gemini'] })
+    const result = await askAIVisionJSON(prompt, fileBase64, fileMime || 'image/jpeg', { prefer: ['openai', 'gemini'], dataClass: 'RESTRICTED', taskType: 'finance' })
     await run(
       `INSERT INTO ai_logs (id,company_id,user_id,agent,action,tokens_used,cost_thb)
        VALUES ($1,$2,$3,'Finance OCR','สแกนใบเสร็จ',500,0.15)`,

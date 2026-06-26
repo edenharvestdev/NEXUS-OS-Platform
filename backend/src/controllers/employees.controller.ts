@@ -136,8 +136,10 @@ export async function reviewPerformance(req: Request, res: Response): Promise<vo
 }`
 
   try {
-    const { askGeminiJSON } = await import('../lib/gemini')
-    const result = await askGeminiJSON(prompt)
+    // Route through the brokered entry (not gemini.ts direct) so employee/HR data
+    // egress is classified + redacted + logged. AIEG-2: flag it RESTRICTED.
+    const { askAIJSON } = await import('../lib/ai-providers')
+    const result = await askAIJSON(prompt, { dataClass: 'RESTRICTED', taskType: 'hr', prefer: ['gemini'] })
 
     await run(
       `INSERT INTO ai_logs (id,company_id,user_id,agent,action,tokens_used,cost_thb)
