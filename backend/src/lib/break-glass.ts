@@ -17,7 +17,12 @@ import { createNotification } from './notifications'
 
 const SELF_SERVICE_MAX_MIN = 15  // <= this → self-service; above → approval
 const MAX_DURATION_MIN = 480     // hard cap (8h)
-const APPROVER_ROLES = ['ceo', 'admin', 'it'] // until ROLE-1 adds it_security/owner
+// ROLE-1: break-glass approvers. `owner` + `it_security` added; ceo/admin kept;
+// generic `it` replaced by `it_security` (only the security function approves
+// emergency access). `platform_superadmin` is deliberately NOT an approver — it
+// is a platform role and must not be able to grant access to business RESTRICTED
+// data (owner-vs-platform_superadmin boundary).
+export const APPROVER_ROLES = ['owner', 'ceo', 'admin', 'it_security']
 
 function nowIso(): string { return new Date().toISOString() }
 function plusMinutesIso(min: number): string { return new Date(Date.now() + min * 60_000).toISOString() }
@@ -32,8 +37,10 @@ export type BreakGlassResult = {
 
 async function notify(companyId: string | undefined, kind: string, meta: Record<string, unknown>): Promise<void> {
   if (!companyId) return
+  // Alert exactly the break-glass approvers (ROLE-1: owner/ceo/admin/it_security)
+  // so the people who can act on a pending grant are the ones notified.
   const recipients = await queryAll(
-    `SELECT id FROM users WHERE company_id = $1 AND role IN ('ceo','admin','it') AND status = 'active' LIMIT 10`,
+    `SELECT id FROM users WHERE company_id = $1 AND role IN ('owner','ceo','admin','it_security') AND status = 'active' LIMIT 10`,
     [companyId],
   ).catch(() => [])
   for (const r of recipients) {

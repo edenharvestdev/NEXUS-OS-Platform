@@ -66,6 +66,14 @@ test('BG: tenant isolation — a privileged user in ANOTHER company cannot touch
   assert.equal((await approveBreakGlass(r.grantId!, { id: 'ceo-9', role: 'ceo', companyId: 'co1' })).ok, true)
 })
 
+test('BG ROLE-1: owner can approve; platform_superadmin & generic it cannot', async () => {
+  const token = await freshStepUp('bg-role')
+  const r = await requestBreakGlass({ userId: 'bg-role', companyId: 'co1', reason: 'approver boundary test', durationMin: 60, stepUpToken: token })
+  assert.equal((await approveBreakGlass(r.grantId!, { id: 'ps', role: 'platform_superadmin', companyId: 'co1' })).reason, 'not_authorized')
+  assert.equal((await approveBreakGlass(r.grantId!, { id: 'it1', role: 'it', companyId: 'co1' })).reason, 'not_authorized')
+  assert.equal((await approveBreakGlass(r.grantId!, { id: 'owner1', role: 'owner', companyId: 'co1' })).ok, true)
+})
+
 test('BG: deny rejects a pending grant', async () => {
   const token = await freshStepUp('bg-deny')
   const r = await requestBreakGlass({ userId: 'bg-deny', companyId: 'co1', reason: 'should be denied', durationMin: 60, stepUpToken: token })

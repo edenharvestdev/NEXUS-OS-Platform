@@ -26,7 +26,7 @@ test('AUTHZ-2: roleModuleScope replaces admin wildcard with an explicit set', ()
 
 test('AUTHZ-2: DATA_CLASS_POLICY matrix is the documented source of truth', () => {
   assert.equal(DATA_CLASS_POLICY.RESTRICTED.roles.length, 0) // no role by default
-  assert.deepEqual(DATA_CLASS_POLICY.HARD.roles, ['admin', 'ceo', 'hr'])
+  assert.deepEqual(DATA_CLASS_POLICY.HARD.roles, ['owner', 'admin', 'ceo', 'hr']) // ROLE-1: owner joined HARD
   assert.equal(DATA_CLASS_POLICY.BASIC.roles, '*')
 })
 

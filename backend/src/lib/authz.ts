@@ -27,8 +27,11 @@ export function tierToClass(tier?: string): DataClass {
   return TIER_TO_CLASS[(tier || 'T1').toUpperCase()] || 'BASIC'
 }
 
-/** Roles allowed to read HARD data under least-privilege (owner/exec/HR). */
-const HARD_ROLES = ['admin', 'ceo', 'hr']
+/** Roles allowed to read HARD data under least-privilege (owner/exec/HR).
+ *  ROLE-1: `owner` (business owner) joins; `platform_superadmin`/`it_security`
+ *  are platform/security roles and deliberately do NOT get HARD business data
+ *  (salary/PHI) by role — they must use break-glass like anyone else. */
+const HARD_ROLES = ['owner', 'admin', 'ceo', 'hr']
 
 /** Least-privilege MODULE access — like canAccessModule but with NO super-admin
  *  short-circuit: admin must be listed for the module like any other role. */
