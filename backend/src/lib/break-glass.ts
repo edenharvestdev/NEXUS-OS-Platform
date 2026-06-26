@@ -17,7 +17,12 @@ import { createNotification } from './notifications'
 
 const SELF_SERVICE_MAX_MIN = 15  // <= this → self-service; above → approval
 const MAX_DURATION_MIN = 480     // hard cap (8h)
-const APPROVER_ROLES = ['ceo', 'admin', 'it'] // until ROLE-1 adds it_security/owner
+// ROLE-1: break-glass approvers. `owner` + `it_security` added; ceo/admin kept;
+// generic `it` replaced by `it_security` (only the security function approves
+// emergency access). `platform_superadmin` is deliberately NOT an approver — it
+// is a platform role and must not be able to grant access to business RESTRICTED
+// data (owner-vs-platform_superadmin boundary).
+export const APPROVER_ROLES = ['owner', 'ceo', 'admin', 'it_security']
 
 function nowIso(): string { return new Date().toISOString() }
 function plusMinutesIso(min: number): string { return new Date(Date.now() + min * 60_000).toISOString() }

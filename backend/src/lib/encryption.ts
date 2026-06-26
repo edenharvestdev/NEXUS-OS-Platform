@@ -75,8 +75,8 @@ export function canViewTier(userRole: string, tier: string): boolean {
   const r = (userRole || 'staff').toLowerCase()
   let current: boolean
   if (tier === 'T0' || tier === 'T1') current = true
-  else if (tier === 'T2') current = ['admin', 'finance', 'hr', 'it'].includes(r)
-  else if (tier === 'T3') current = ['admin', 'hr'].includes(r)
+  else if (tier === 'T2') current = ['owner', 'admin', 'finance', 'hr', 'it'].includes(r) // ROLE-1: owner sees salary/HARD
+  else if (tier === 'T3') current = ['admin', 'hr'].includes(r)                            // RESTRICTED stays break-glass-only for owner
   else current = false
   // Super-admin/over-grant bypass #4 — the data-god path. Observe (shadow) where
   // a current grant of HARD/RESTRICTED data exceeds least-privilege.
