@@ -6,6 +6,7 @@ import { GoogleGenerativeAI, Part } from '@google/generative-ai'
 import { parseGeminiJSON } from './gemini-parse'
 import { redactForProvider } from './ai-redaction'
 import { logAiQuery, promptHash } from './ai-query-log'
+import { brokerEgress, auditEgressBlocked } from './ai-broker'
 
 export type AIProvider = 'openai' | 'claude' | 'gemini' | 'typhoon'
 
@@ -22,6 +23,13 @@ export interface AICallOptions {
   imageBase64?: string
   mimeType?: string
   maxTokens?: number
+  // AIEG-2 broker hints (all optional; broker also infers from redaction signal):
+  /** Explicit egress data class (e.g. 'RESTRICTED') — overrides inference. */
+  dataClass?: string
+  /** Task hint (e.g. 'payroll','medical') used to classify the egress. */
+  taskType?: string
+  /** Explicit per-call consent to send restricted data to an external provider. */
+  consent?: boolean
 }
 
 const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-4o'
@@ -235,6 +243,20 @@ export async function askWithFallback(prompt: string, options: AICallOptions = {
   const red = mode === 'off' ? { text: prompt, count: 0, hits: {} } : redactForProvider(prompt)
   const outbound = mode === 'enforce' ? red.text : prompt
 
+  // AIEG-2 broker — data-class egress decision. SHADOW unless AI_BROKER_ENFORCE=on,
+  // so `decision.block` is always false in the dark default and behavior is unchanged.
+  const decision = brokerEgress({ dataClass: options.dataClass, sensitiveCount: red.count, consent: options.consent, taskType: options.taskType })
+  if (decision.block) {
+    // ENFORCE: restricted egress without consent — never call the external provider.
+    await logAiQuery({
+      redactionMode: mode, redactionCount: red.count, redactionHits: red.hits,
+      restrictedAttempt: true, blocked: true, securityLevel: decision.dataClass, taskType: options.taskType,
+      promptChars: prompt.length, promptHash: promptHash(prompt),
+    })
+    auditEgressBlocked(decision)
+    throw new Error('AI egress blocked: restricted data may not be sent to an external provider without consent')
+  }
+
   const errors: string[] = []
   let result: AIResult | null = null
   for (const provider of chain) {
@@ -257,6 +279,8 @@ export async function askWithFallback(prompt: string, options: AICallOptions = {
       redactionHits: red.hits,
       restrictedAttempt: red.count > 0,
       blocked: !result,
+      securityLevel: decision.dataClass, // AIEG-2: classified egress class
+      taskType: options.taskType,        // AIEG-2
       promptChars: prompt.length,
       promptHash: promptHash(prompt),
       responseSummary: result?.text ? result.text.slice(0, 200) : undefined,
