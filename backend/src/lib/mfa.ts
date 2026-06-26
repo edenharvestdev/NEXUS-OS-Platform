@@ -94,11 +94,18 @@ export async function verifyStepUp(token: string, expectedUserId?: string): Prom
   return decodeStepUp(token, expectedUserId)
 }
 
-/** Validate AND mark the jti used (single-use) — for enforcement. */
+/** Validate AND mark the jti used (single-use) — for enforcement. The jti
+ *  PRIMARY KEY is the authoritative single-use gate: if a concurrent request
+ *  consumed the same token first, the INSERT violates the PK and we return
+ *  'replayed' (deterministic) instead of throwing a 500. */
 export async function consumeStepUp(token: string, expectedUserId?: string): Promise<StepUpResult> {
   const r = await decodeStepUp(token, expectedUserId)
   if (!r.ok) return r
-  await run('INSERT INTO step_up_used_jti (jti, user_id, used_at) VALUES ($1,$2,$3)', [r.jti, r.userId || null, nowIso()])
+  try {
+    await run('INSERT INTO step_up_used_jti (jti, user_id, used_at) VALUES ($1,$2,$3)', [r.jti, r.userId || null, nowIso()])
+  } catch {
+    return { ok: false, reason: 'replayed' }
+  }
   return r
 }
 
