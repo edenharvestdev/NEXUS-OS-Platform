@@ -1,10 +1,15 @@
 import { queryAll, queryOne } from './db'
 import { MODULE_ACCESS, normalizeRole } from './rbac'
+import { shadowCheck } from './authz'
 
 /** Effective modules = role defaults ∪ permission group modules */
 export async function getUserModules(userId: string, role?: string): Promise<Set<string>> {
   const r = normalizeRole(role)
-  if (r === 'admin') return new Set(['*'])
+  if (r === 'admin') {
+    // Super-admin bypass #3 — admin gets the '*' wildcard module set.
+    shadowCheck('getUserModules:wildcard', true, { allowed: false, reason: 'admin wildcard "*" (no scoped module set under least-privilege)' })
+    return new Set(['*'])
+  }
 
   const modules = new Set<string>()
   for (const [mod, roles] of Object.entries(MODULE_ACCESS)) {

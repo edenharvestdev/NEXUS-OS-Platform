@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express'
 import { canAccessModule, normalizeRole } from '../lib/rbac'
 import { userCanAccessModule } from '../lib/user-permissions'
+import { shadowCheck } from '../lib/authz'
 
 /** Department-head / management roles — everyone except plain `staff`.
  *  Use for manager-level actions (reviewing work logs, AI task assignment). */
@@ -12,7 +13,12 @@ export const MANAGER_ROLES = [
 export function requireRole(...roles: string[]) {
   return (req: Request, res: Response, next: NextFunction): void => {
     const role = normalizeRole(req.user?.role)
-    if (role === 'admin' || roles.map(r => r.toLowerCase()).includes(role)) {
+    const inList = roles.map(r => r.toLowerCase()).includes(role)
+    if (role === 'admin' || inList) {
+      // Super-admin bypass #2 — admin passes even when not in the required list.
+      if (role === 'admin' && !inList) {
+        shadowCheck(`requireRole`, true, { allowed: false, reason: `admin not in required roles [${roles.join(',')}]` }, { required_roles: roles })
+      }
       next()
       return
     }

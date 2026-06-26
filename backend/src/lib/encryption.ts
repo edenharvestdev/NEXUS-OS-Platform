@@ -73,11 +73,18 @@ export function maskField(value: string | null | undefined, tier: string): strin
 
 export function canViewTier(userRole: string, tier: string): boolean {
   const r = (userRole || 'staff').toLowerCase()
-  if (tier === 'T0') return true
-  if (tier === 'T1') return true
-  if (tier === 'T2') return ['admin', 'finance', 'hr', 'it'].includes(r)
-  if (tier === 'T3') return ['admin', 'hr'].includes(r)
-  return false
+  let current: boolean
+  if (tier === 'T0' || tier === 'T1') current = true
+  else if (tier === 'T2') current = ['admin', 'finance', 'hr', 'it'].includes(r)
+  else if (tier === 'T3') current = ['admin', 'hr'].includes(r)
+  else current = false
+  // Super-admin/over-grant bypass #4 — the data-god path. Observe (shadow) where
+  // a current grant of HARD/RESTRICTED data exceeds least-privilege.
+  if (current && (tier === 'T2' || tier === 'T3')) {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    try { const a = require('./authz'); a.shadowCheck(`canViewTier:${tier}`, true, a.resolveDataClass({ role: r }, a.tierToClass(tier))) } catch { /* shadow only */ }
+  }
+  return current
 }
 
 export function sanitizeUserForRole(user: any, viewerRole: string): any {
