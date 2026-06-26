@@ -113,7 +113,7 @@ export async function buildOrgContext(companyId: string, viewerRole: string, vie
     }
   }
 
-  if (['admin', 'hr', 'finance'].includes(viewerRole.toLowerCase())) {
+  if (['owner', 'admin', 'hr', 'finance'].includes(viewerRole.toLowerCase())) { // ROLE-1: owner reads salary/HARD
     const openPeriod = await queryOne(
       `SELECT year, month, status FROM payroll_periods WHERE company_id = $1 ORDER BY year DESC, month DESC LIMIT 1`,
       [companyId],
