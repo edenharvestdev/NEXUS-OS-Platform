@@ -1,6 +1,7 @@
 import { queryAll, queryOne, run, execMulti } from './db'
 import { AUDIT_LOGS_DDL, AUDIT_LOGS_APPENDONLY_DDL, AI_QUERY_LOGS_DDL } from './nexus-audit-schema'
 import { MFA_STEPUP_DDL } from './nexus-mfa-schema'
+import { BREAK_GLASS_DDL } from './nexus-breakglass-schema'
 
 export type Migration = {
   version: number
@@ -99,6 +100,11 @@ export const MIGRATIONS: Migration[] = [
     version: 14,
     name: 'mfa_stepup_tables',
     up: MFA_STEPUP_DDL, // MFA-1 user_mfa + step_up_used_jti (PG + SQLite)
+  },
+  {
+    version: 15,
+    name: 'break_glass_grants',
+    up: BREAK_GLASS_DDL, // BG-1 break-glass grants (PG + SQLite)
   },
 ]
 
