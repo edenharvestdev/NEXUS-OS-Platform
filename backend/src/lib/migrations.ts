@@ -1,5 +1,6 @@
 import { queryAll, queryOne, run, execMulti } from './db'
 import { AUDIT_LOGS_DDL, AUDIT_LOGS_APPENDONLY_DDL, AI_QUERY_LOGS_DDL } from './nexus-audit-schema'
+import { MFA_STEPUP_DDL } from './nexus-mfa-schema'
 
 export type Migration = {
   version: number
@@ -93,6 +94,11 @@ export const MIGRATIONS: Migration[] = [
     version: 13,
     name: 'ai_query_logs_table',
     up: AI_QUERY_LOGS_DDL, // AIEG-1 AI egress log (PG + SQLite)
+  },
+  {
+    version: 14,
+    name: 'mfa_stepup_tables',
+    up: MFA_STEPUP_DDL, // MFA-1 user_mfa + step_up_used_jti (PG + SQLite)
   },
 ]
 
