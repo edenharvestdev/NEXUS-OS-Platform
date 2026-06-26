@@ -91,3 +91,12 @@ test('SD: double-delete and restore-of-live are rejected', async () => {
   await restore('deals', id, owner(CO_A), {})
   assert.equal((await restore('deals', id, owner(CO_A), {})).reason, 'not_deleted')
 })
+
+// Keep last: drops audit_log to force the strict audit write to throw, then restores it.
+test('SD: atomicity — a failed audit write reverts the mutation (no orphan delete)', async () => {
+  const id = await seedDeal(CO_A)
+  await execMulti('DROP TABLE IF EXISTS audit_log')                 // make writeAuditStrict throw
+  await assert.rejects(softDelete('deals', id, owner(CO_A), { reason: 'x' }))
+  await execMulti(`CREATE TABLE IF NOT EXISTS audit_log (id TEXT PRIMARY KEY, company_id TEXT, user_id TEXT, action TEXT, resource TEXT, resource_id TEXT, security_tier TEXT, meta TEXT, created_at TEXT DEFAULT (datetime('now')));`)
+  assert.ok((await visibleIds(CO_A)).includes(id))                 // reverted → still live, not deleted
+})

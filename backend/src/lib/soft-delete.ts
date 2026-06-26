@@ -90,10 +90,18 @@ export async function softDelete(resource: string, id: string, actor: SoftDelete
     `UPDATE ${d.table} SET deleted_at=$1, deleted_by=$2, delete_reason=$3, delete_source=$4 WHERE id=$5 AND company_id=$6 AND deleted_at IS NULL`,
     [ts, actor.id, opts.reason || null, source, id, actor.companyId],
   )
-  await writeAuditStrict({
-    companyId: actor.companyId, userId: actor.id, action: 'softdelete.delete', resource: d.table, resourceId: id,
-    securityTier: d.tier, meta: { reason: opts.reason || null, source },
-  })
+  // Audit MUST accompany the mutation. No cross-DB transaction helper exists, so
+  // if the (strict) audit write fails we revert the mutation and rethrow — the
+  // async-guard turns the throw into a 500. Net: never a mutation without audit.
+  try {
+    await writeAuditStrict({
+      companyId: actor.companyId, userId: actor.id, action: 'softdelete.delete', resource: d.table, resourceId: id,
+      securityTier: d.tier, meta: { reason: opts.reason || null, source },
+    })
+  } catch (e) {
+    await run(`UPDATE ${d.table} SET deleted_at=NULL, deleted_by=NULL, delete_reason=NULL, delete_source=NULL WHERE id=$1 AND company_id=$2`, [id, actor.companyId]).catch(() => {})
+    throw e
+  }
   return { ok: true, resource, id }
 }
 
@@ -108,14 +116,21 @@ export async function restore(resource: string, id: string, actor: SoftDeleteAct
   if (!row.deleted_at) return { ok: false, reason: 'not_deleted' }
 
   const ts = nowIso()
+  const prevDeletedAt = row.deleted_at // for revert if the audit write fails
   await run(
     `UPDATE ${d.table} SET deleted_at=NULL, restored_at=$1, restored_by=$2, restore_reason=$3 WHERE id=$4 AND company_id=$5 AND deleted_at IS NOT NULL`,
     [ts, actor.id, opts.reason || null, id, actor.companyId],
   )
-  await writeAuditStrict({
-    companyId: actor.companyId, userId: actor.id, action: 'softdelete.restore', resource: d.table, resourceId: id,
-    securityTier: d.tier, meta: { reason: opts.reason || null },
-  })
+  // Atomicity: revert to the deleted state if the strict audit write fails.
+  try {
+    await writeAuditStrict({
+      companyId: actor.companyId, userId: actor.id, action: 'softdelete.restore', resource: d.table, resourceId: id,
+      securityTier: d.tier, meta: { reason: opts.reason || null },
+    })
+  } catch (e) {
+    await run(`UPDATE ${d.table} SET deleted_at=$1, restored_at=NULL, restored_by=NULL, restore_reason=NULL WHERE id=$2 AND company_id=$3`, [prevDeletedAt, id, actor.companyId]).catch(() => {})
+    throw e
+  }
   return { ok: true, resource, id }
 }
 

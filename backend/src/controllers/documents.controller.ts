@@ -103,7 +103,7 @@ ${content ? `เนื้อหาเอกสาร:\n${content}` : ''}`
     [newId(), company_id, user_id, `วิเคราะห์: ${name}`],
   )
 
-  const data = await queryOne('SELECT * FROM documents WHERE id = $1', [id])
+  const data = await queryOne('SELECT * FROM documents WHERE id = $1 AND deleted_at IS NULL', [id])
   res.json({
     data: {
       ...data,
@@ -120,7 +120,7 @@ export async function remove(req: Request, res: Response): Promise<void> {
     if (!r.ok) { res.status(softDeleteHttpStatus(r.reason)).json({ error: r.reason }); return }
     res.json({ success: true, soft_deleted: true }); return
   }
-  const doc = await queryOne('SELECT id FROM documents WHERE id = $1 AND company_id = $2', [id, req.user.company_id])
+  const doc = await queryOne('SELECT id FROM documents WHERE id = $1 AND company_id = $2 AND deleted_at IS NULL', [id, req.user.company_id])
   if (!doc) { res.status(404).json({ error: 'Document not found' }); return }
   await run('DELETE FROM documents WHERE id = $1 AND company_id = $2', [id, req.user.company_id])
   res.json({ success: true })
@@ -132,7 +132,7 @@ export async function updateRisks(req: Request, res: Response): Promise<void> {
   const { risks } = req.body
   if (!risks) { res.status(400).json({ error: 'risks data is required' }); return }
 
-  const doc = await queryOne('SELECT id FROM documents WHERE id = $1 AND company_id = $2', [id, req.user.company_id])
+  const doc = await queryOne('SELECT id FROM documents WHERE id = $1 AND company_id = $2 AND deleted_at IS NULL', [id, req.user.company_id])
   if (!doc) { res.status(404).json({ error: 'Document not found' }); return }
 
   await run(
