@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert'
-import { brokerEgress, classifyEgress } from '../src/lib/ai-broker'
+import { brokerEgress, classifyEgress, textLooksRestricted } from '../src/lib/ai-broker'
 
 test('AIEG-2: classifyEgress — explicit class wins, then task hint, then sensitive count', () => {
   assert.equal(classifyEgress({ dataClass: 'restricted' }), 'RESTRICTED')      // explicit, case-insensitive
@@ -37,6 +37,19 @@ test('AIEG-2: ENFORCE — restricted egress blocks unless consented', () => {
   } finally {
     delete process.env.AI_BROKER_ENFORCE
   }
+})
+
+test('AIEG-2: free-text PHI/salary raises class even when the structured redactor misses it', () => {
+  // these have NO structured token (redactor count 0) but are clearly RESTRICTED
+  assert.equal(textLooksRestricted('patient diagnosed with diabetes, allergy to penicillin'), true)
+  assert.equal(textLooksRestricted('employee HIV status positive'), true)
+  assert.equal(textLooksRestricted('gross 45000 net 38500'), true)
+  assert.equal(textLooksRestricted('ผู้ป่วยแพ้ยา และประวัติการรักษา'), true)
+  assert.equal(textLooksRestricted('เงินเดือนพนักงานเดือนนี้'), true)
+  assert.equal(textLooksRestricted('write a marketing tagline for our cafe'), false)
+  // classifyEgress now catches them with no caller hint and count 0
+  assert.equal(classifyEgress({ text: 'patient HIV status', sensitiveCount: 0 }), 'RESTRICTED')
+  assert.equal(classifyEgress({ text: 'just a friendly hello', sensitiveCount: 0 }), 'MEDIUM')
 })
 
 test('AIEG-2: medium egress is always allowed', () => {

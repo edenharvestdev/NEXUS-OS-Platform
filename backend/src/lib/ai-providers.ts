@@ -245,7 +245,7 @@ export async function askWithFallback(prompt: string, options: AICallOptions = {
 
   // AIEG-2 broker — data-class egress decision. SHADOW unless AI_BROKER_ENFORCE=on,
   // so `decision.block` is always false in the dark default and behavior is unchanged.
-  const decision = brokerEgress({ dataClass: options.dataClass, sensitiveCount: red.count, consent: options.consent, taskType: options.taskType })
+  const decision = brokerEgress({ dataClass: options.dataClass, sensitiveCount: red.count, consent: options.consent, taskType: options.taskType, text: prompt })
   if (decision.block) {
     // ENFORCE: restricted egress without consent — never call the external provider.
     await logAiQuery({

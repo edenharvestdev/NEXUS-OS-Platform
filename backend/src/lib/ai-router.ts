@@ -63,6 +63,11 @@ export async function routeAI(
   const result = await askWithFallback(fullPrompt, {
     system: options?.system,
     prefer: route.prefer,
+    // AIEG-2: forward the task hint, and flag grounded egress — grounded prompts
+    // inject org context (employee names, doc/HR summaries) the structured redactor
+    // cannot catch, so they must classify RESTRICTED.
+    taskType,
+    dataClass: options?.grounded ? 'RESTRICTED' : undefined,
   })
 
   if (options?.companyId) {
