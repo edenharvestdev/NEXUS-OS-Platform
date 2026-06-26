@@ -84,6 +84,19 @@ test('SD: unknown resource is rejected', async () => {
   assert.equal((await softDelete('users', 'x', owner(CO_A), {})).reason, 'unknown_resource')
 })
 
+test('SD: audit — denied attempts (tenant/role) and list views are recorded', async () => {
+  const id = await seedDeal(CO_A)
+  await softDelete('deals', id, owner(CO_B), { reason: 'x' }) // tenant_mismatch → denied
+  await softDelete('deals', id, staff(CO_A), { reason: 'x' }) // not_authorized → denied
+  await softDelete('deals', id, owner(CO_A), { reason: 'd' }) // ok
+  await restore('deals', id, staff(CO_A), {})                 // not_authorized → denied
+  await listDeleted('deals', owner(CO_A))                      // list view → audited
+  const denied = await queryAll(`SELECT meta FROM audit_log WHERE resource_id=$1 AND action='softdelete.denied'`, [id])
+  assert.ok(denied.length >= 3, 'expected >=3 softdelete.denied rows')
+  const listed = await queryAll(`SELECT id FROM audit_log WHERE action='softdelete.list_deleted'`)
+  assert.ok(listed.length >= 1, 'expected a softdelete.list_deleted row')
+})
+
 test('SD: double-delete and restore-of-live are rejected', async () => {
   const id = await seedDeal(CO_A)
   await softDelete('deals', id, owner(CO_A), { reason: 'd' })

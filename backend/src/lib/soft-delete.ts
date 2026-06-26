@@ -17,9 +17,18 @@
  * tenants, and it can never mutate.
  */
 import { queryOne, queryAll, run } from './db'
-import { writeAuditStrict } from './audit'
+import { writeAuditStrict, writeAudit } from './audit'
 
 export type SoftDeleteActor = { id: string; role?: string; companyId?: string }
+
+/** Best-effort audit for non-mutating / denied events (reads + failed attempts
+ *  must not fail the request, so writeAudit not writeAuditStrict). */
+function auditDenied(actor: SoftDeleteActor, op: string, resource: string, id: string, reason: string): void {
+  void writeAudit({
+    companyId: actor.companyId, userId: actor.id, action: 'softdelete.denied', resource, resourceId: id,
+    securityTier: 'T1', meta: { op, reason, role: actor.role },
+  }).catch(() => { /* best-effort */ })
+}
 export type SoftDeleteResult = { ok: boolean; reason?: string; resource?: string; id?: string }
 
 type ResourceDef = {
@@ -80,8 +89,8 @@ export async function softDelete(resource: string, id: string, actor: SoftDelete
   if (!d) return { ok: false, reason: 'unknown_resource' }
   const row = await queryOne(`SELECT id, company_id, deleted_at FROM ${d.table} WHERE id = $1`, [id])
   if (!row) return { ok: false, reason: 'not_found' }
-  if (!actor.companyId || row.company_id !== actor.companyId) return { ok: false, reason: 'not_found' } // tenant isolation
-  if (!d.deleteRoles.includes(norm(actor.role))) return { ok: false, reason: 'not_authorized' }
+  if (!actor.companyId || row.company_id !== actor.companyId) { auditDenied(actor, 'delete', d.table, id, 'tenant_mismatch'); return { ok: false, reason: 'not_found' } }
+  if (!d.deleteRoles.includes(norm(actor.role))) { auditDenied(actor, 'delete', d.table, id, 'not_authorized'); return { ok: false, reason: 'not_authorized' } }
   if (row.deleted_at) return { ok: false, reason: 'already_deleted' }
 
   const ts = nowIso()
@@ -111,8 +120,8 @@ export async function restore(resource: string, id: string, actor: SoftDeleteAct
   if (!d) return { ok: false, reason: 'unknown_resource' }
   const row = await queryOne(`SELECT id, company_id, deleted_at FROM ${d.table} WHERE id = $1`, [id])
   if (!row) return { ok: false, reason: 'not_found' }
-  if (!actor.companyId || row.company_id !== actor.companyId) return { ok: false, reason: 'not_found' } // tenant isolation
-  if (!canRestore(actor.role)) return { ok: false, reason: 'not_authorized' }
+  if (!actor.companyId || row.company_id !== actor.companyId) { auditDenied(actor, 'restore', d.table, id, 'tenant_mismatch'); return { ok: false, reason: 'not_found' } }
+  if (!canRestore(actor.role)) { auditDenied(actor, 'restore', d.table, id, 'not_authorized'); return { ok: false, reason: 'not_authorized' } }
   if (!row.deleted_at) return { ok: false, reason: 'not_deleted' }
 
   const ts = nowIso()
@@ -139,17 +148,21 @@ export async function restore(resource: string, id: string, actor: SoftDeleteAct
 export async function listDeleted(resource: string, actor: SoftDeleteActor, opts: { limit?: number } = {}): Promise<{ ok: boolean; reason?: string; rows?: any[] }> {
   const d = def(resource)
   if (!d) return { ok: false, reason: 'unknown_resource' }
-  if (!canViewDeleted(actor.role)) return { ok: false, reason: 'not_authorized' }
+  if (!canViewDeleted(actor.role)) { auditDenied(actor, 'list', d.table, '', 'not_authorized'); return { ok: false, reason: 'not_authorized' } }
   const limit = Math.min(opts.limit || 100, 500)
+  const isPlatform = norm(actor.role) === PLATFORM_VIEW_ROLE
 
-  if (norm(actor.role) === PLATFORM_VIEW_ROLE) {
-    const rows = await queryAll(`SELECT * FROM ${d.table} WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC LIMIT $1`, [limit])
-    return { ok: true, rows }
+  let rows: any[]
+  if (isPlatform) {
+    rows = await queryAll(`SELECT * FROM ${d.table} WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC LIMIT $1`, [limit])
+  } else {
+    if (!actor.companyId) return { ok: false, reason: 'not_authorized' }
+    rows = await queryAll(`SELECT * FROM ${d.table} WHERE company_id=$1 AND deleted_at IS NOT NULL ORDER BY deleted_at DESC LIMIT $2`, [actor.companyId, limit])
   }
-  if (!actor.companyId) return { ok: false, reason: 'not_authorized' }
-  const rows = await queryAll(
-    `SELECT * FROM ${d.table} WHERE company_id=$1 AND deleted_at IS NOT NULL ORDER BY deleted_at DESC LIMIT $2`,
-    [actor.companyId, limit],
-  )
+  // Best-effort audit of the (sensitive) deleted-data view — esp. platform cross-tenant.
+  void writeAudit({
+    companyId: actor.companyId, userId: actor.id, action: 'softdelete.list_deleted', resource: d.table,
+    securityTier: 'T1', meta: { cross_tenant: isPlatform, count: rows.length },
+  }).catch(() => { /* best-effort */ })
   return { ok: true, rows }
 }
