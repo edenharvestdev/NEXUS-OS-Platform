@@ -5,7 +5,7 @@ import { MFA_STEPUP_DDL } from '../src/lib/nexus-mfa-schema'
 import { BREAK_GLASS_DDL } from '../src/lib/nexus-breakglass-schema'
 import { enrollMfa, confirmMfa, issueStepUp } from '../src/lib/mfa'
 import { totp } from '../src/lib/totp'
-import { requestBreakGlass, approveBreakGlass, revokeBreakGlass, hasActiveBreakGlass } from '../src/lib/break-glass'
+import { requestBreakGlass, approveBreakGlass, denyBreakGlass, revokeBreakGlass, hasActiveBreakGlass } from '../src/lib/break-glass'
 import { resolveDataClass } from '../src/lib/authz'
 
 async function freshStepUp(userId: string): Promise<string> {
@@ -49,17 +49,36 @@ test('BG: >15min needs a SECOND approver (two-person); self/low-priv rejected', 
   const r = await requestBreakGlass({ userId: 'bg-2', companyId: 'co1', reason: 'long audit task', durationMin: 60, stepUpToken: token })
   assert.equal(r.status, 'pending')
   assert.equal(await hasActiveBreakGlass('bg-2'), false)                                   // not active until approved
-  assert.equal((await approveBreakGlass(r.grantId!, { id: 'bg-2', role: 'admin' })).reason, 'self_approval_forbidden')
-  assert.equal((await approveBreakGlass(r.grantId!, { id: 'x', role: 'staff' })).reason, 'not_authorized')
+  assert.equal((await approveBreakGlass(r.grantId!, { id: 'bg-2', role: 'admin', companyId: 'co1' })).reason, 'self_approval_forbidden')
+  assert.equal((await approveBreakGlass(r.grantId!, { id: 'x', role: 'staff', companyId: 'co1' })).reason, 'not_authorized')
   assert.equal((await approveBreakGlass(r.grantId!, { id: 'ceo-1', role: 'ceo', companyId: 'co1' })).ok, true)
   assert.equal(await hasActiveBreakGlass('bg-2'), true)                                     // active after approval
+})
+
+test('BG: tenant isolation — a privileged user in ANOTHER company cannot touch the grant', async () => {
+  const token = await freshStepUp('bg-iso')
+  const r = await requestBreakGlass({ userId: 'bg-iso', companyId: 'co1', reason: 'isolation case test', durationMin: 60, stepUpToken: token })
+  const foreign = { id: 'attacker', role: 'admin', companyId: 'co2' } // privileged, but different tenant
+  assert.equal((await approveBreakGlass(r.grantId!, foreign)).reason, 'not_found')          // masked as not_found
+  assert.equal((await denyBreakGlass(r.grantId!, foreign)).reason, 'not_found')
+  assert.equal((await revokeBreakGlass(r.grantId!, foreign)).reason, 'not_found')
+  // the grant is untouched — a same-tenant approver still works
+  assert.equal((await approveBreakGlass(r.grantId!, { id: 'ceo-9', role: 'ceo', companyId: 'co1' })).ok, true)
+})
+
+test('BG: deny rejects a pending grant', async () => {
+  const token = await freshStepUp('bg-deny')
+  const r = await requestBreakGlass({ userId: 'bg-deny', companyId: 'co1', reason: 'should be denied', durationMin: 60, stepUpToken: token })
+  assert.equal(r.status, 'pending')
+  assert.equal((await denyBreakGlass(r.grantId!, { id: 'ceo-1', role: 'ceo', companyId: 'co1' })).status, 'denied')
+  assert.equal(await hasActiveBreakGlass('bg-deny'), false)                                  // denied never activates
 })
 
 test('BG: revoke ends an active grant', async () => {
   const token = await freshStepUp('bg-3')
   const r = await requestBreakGlass({ userId: 'bg-3', companyId: 'co1', reason: 'quick check', durationMin: 5, stepUpToken: token })
   assert.equal(await hasActiveBreakGlass('bg-3'), true)
-  assert.equal((await revokeBreakGlass(r.grantId!, { id: 'bg-3' })).ok, true)               // owner can revoke
+  assert.equal((await revokeBreakGlass(r.grantId!, { id: 'bg-3', companyId: 'co1' })).ok, true)  // owner can revoke
   assert.equal(await hasActiveBreakGlass('bg-3'), false)
 })
 

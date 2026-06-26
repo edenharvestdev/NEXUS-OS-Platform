@@ -105,14 +105,17 @@ export async function requestBreakGlass(p: {
 export async function approveBreakGlass(grantId: string, approver: { id: string; role?: string; companyId?: string }): Promise<BreakGlassResult> {
   const g = await queryOne('SELECT * FROM break_glass_grants WHERE id = $1', [grantId])
   if (!g) return { ok: false, reason: 'not_found' }
+  // Tenant isolation: never act on another company's grant (mask as not_found).
+  if (!approver.companyId || g.company_id !== approver.companyId) return { ok: false, reason: 'not_found' }
   if (g.status !== 'pending') return { ok: false, reason: 'not_pending' }
   if (g.user_id === approver.id) return { ok: false, reason: 'self_approval_forbidden' }
   if (!APPROVER_ROLES.includes(normalizeRole(approver.role))) return { ok: false, reason: 'not_authorized' }
 
   const now = nowIso()
   const expiresAt = plusMinutesIso(g.duration_min)
+  // status='pending' guard makes a concurrent double-approve a no-op (only one wins).
   await run(
-    `UPDATE break_glass_grants SET status='active', approved_by=$1, activated_at=$2, expires_at=$3, decided_at=$4, decided_by=$5 WHERE id=$6`,
+    `UPDATE break_glass_grants SET status='active', approved_by=$1, activated_at=$2, expires_at=$3, decided_at=$4, decided_by=$5 WHERE id=$6 AND status='pending'`,
     [approver.id, now, expiresAt, now, approver.id, grantId],
   )
   await writeAuditStrict({
@@ -124,13 +127,14 @@ export async function approveBreakGlass(grantId: string, approver: { id: string;
 }
 
 /** Deny a pending grant. */
-export async function denyBreakGlass(grantId: string, approver: { id: string; role?: string }): Promise<BreakGlassResult> {
+export async function denyBreakGlass(grantId: string, approver: { id: string; role?: string; companyId?: string }): Promise<BreakGlassResult> {
   const g = await queryOne('SELECT * FROM break_glass_grants WHERE id = $1', [grantId])
   if (!g) return { ok: false, reason: 'not_found' }
+  if (!approver.companyId || g.company_id !== approver.companyId) return { ok: false, reason: 'not_found' } // tenant isolation
   if (g.status !== 'pending') return { ok: false, reason: 'not_pending' }
   if (!APPROVER_ROLES.includes(normalizeRole(approver.role))) return { ok: false, reason: 'not_authorized' }
   const now = nowIso()
-  await run(`UPDATE break_glass_grants SET status='denied', decided_at=$1, decided_by=$2 WHERE id=$3`, [now, approver.id, grantId])
+  await run(`UPDATE break_glass_grants SET status='denied', decided_at=$1, decided_by=$2 WHERE id=$3 AND status='pending'`, [now, approver.id, grantId])
   await writeAuditStrict({
     companyId: g.company_id, userId: approver.id, action: 'breakglass.deny', resource: 'break_glass_grants', resourceId: grantId,
     securityTier: 'T3', meta: { for_user: g.user_id },
@@ -139,14 +143,15 @@ export async function denyBreakGlass(grantId: string, approver: { id: string; ro
 }
 
 /** Revoke an active/pending grant early (requester themselves or a privileged user). */
-export async function revokeBreakGlass(grantId: string, by: { id: string; role?: string }): Promise<BreakGlassResult> {
+export async function revokeBreakGlass(grantId: string, by: { id: string; role?: string; companyId?: string }): Promise<BreakGlassResult> {
   const g = await queryOne('SELECT * FROM break_glass_grants WHERE id = $1', [grantId])
   if (!g) return { ok: false, reason: 'not_found' }
+  if (!by.companyId || g.company_id !== by.companyId) return { ok: false, reason: 'not_found' } // tenant isolation
   if (g.status !== 'active' && g.status !== 'pending') return { ok: false, reason: 'not_revocable' }
   const isOwner = g.user_id === by.id
   if (!isOwner && !APPROVER_ROLES.includes(normalizeRole(by.role))) return { ok: false, reason: 'not_authorized' }
   const now = nowIso()
-  await run(`UPDATE break_glass_grants SET status='revoked', decided_at=$1, decided_by=$2 WHERE id=$3`, [now, by.id, grantId])
+  await run(`UPDATE break_glass_grants SET status='revoked', decided_at=$1, decided_by=$2 WHERE id=$3 AND status IN ('active','pending')`, [now, by.id, grantId])
   await writeAuditStrict({
     companyId: g.company_id, userId: by.id, action: 'breakglass.revoke', resource: 'break_glass_grants', resourceId: grantId,
     securityTier: 'T3', meta: { for_user: g.user_id },
@@ -156,14 +161,14 @@ export async function revokeBreakGlass(grantId: string, by: { id: string; role?:
 
 /** Does `userId` hold an ACTIVE, non-expired grant for this data class/scope?
  *  This is what the future enforce path checks. ISO-string time compare is
- *  cross-DB safe. */
-export async function hasActiveBreakGlass(userId: string, dataClass = 'RESTRICTED', scope = '*'): Promise<boolean> {
-  const row = await queryOne(
-    `SELECT id FROM break_glass_grants
-     WHERE user_id=$1 AND data_class=$2 AND status='active' AND expires_at > $3 AND (scope='*' OR scope=$4)
-     LIMIT 1`,
-    [userId, dataClass.toUpperCase(), nowIso(), scope],
-  )
+ *  cross-DB safe. Pass companyId so the enforce path cannot gate-open across
+ *  tenants. */
+export async function hasActiveBreakGlass(userId: string, dataClass = 'RESTRICTED', scope = '*', companyId?: string): Promise<boolean> {
+  const params: any[] = [userId, dataClass.toUpperCase(), nowIso(), scope]
+  let sql = `SELECT id FROM break_glass_grants
+     WHERE user_id=$1 AND data_class=$2 AND status='active' AND expires_at > $3 AND (scope='*' OR scope=$4)`
+  if (companyId !== undefined) { params.push(companyId); sql += ' AND company_id=$5' }
+  const row = await queryOne(sql + ' LIMIT 1', params)
   return !!row
 }
 

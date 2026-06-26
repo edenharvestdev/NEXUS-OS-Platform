@@ -61,13 +61,13 @@ export async function postBreakGlassApprove(req: Request, res: Response): Promis
 }
 
 export async function postBreakGlassDeny(req: Request, res: Response): Promise<void> {
-  const r = await denyBreakGlass(String(req.params.id), { id: req.user.id, role: req.user.role })
+  const r = await denyBreakGlass(String(req.params.id), { id: req.user.id, role: req.user.role, companyId: req.user.company_id })
   if (!r.ok) { bgError(res, r.reason); return }
   res.json(r)
 }
 
 export async function postBreakGlassRevoke(req: Request, res: Response): Promise<void> {
-  const r = await revokeBreakGlass(String(req.params.id), { id: req.user.id, role: req.user.role })
+  const r = await revokeBreakGlass(String(req.params.id), { id: req.user.id, role: req.user.role, companyId: req.user.company_id })
   if (!r.ok) { bgError(res, r.reason); return }
   res.json(r)
 }
